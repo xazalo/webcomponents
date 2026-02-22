@@ -1,6 +1,10 @@
 import BubbleButton from "./BubbleButton.vue"
-import CyberPunkButton from "./CyberPunkButton"
+import CyberButton from "./CyberButton"
 import SpeedButton from "./SpeedButton"
-import DefaultButton from "./DefaultButton"
+import BentoButton from "./BentoButton"
+import BrutalismButton from "./BrutalismButton"
+import ClayButton from "./ClayButton"
+import NeuButton from "./NeuButton"
+import GlassButton from "./GlassButton"
 
-export { BubbleButton, CyberPunkButton, SpeedButton, DefaultButton }
+export { BubbleButton, CyberButton, SpeedButton, BentoButton, BrutalismButton, ClayButton, NeuButton, GlassButton }

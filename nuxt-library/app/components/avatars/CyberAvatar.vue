@@ -1,7 +1,14 @@
 <template>
   <div v-bind="$attrs" :class="$style.avatarRoot" :style="avatarStyles">
     <div :class="$style.cyberFrame">
-      <img v-if="src" :src="src" :alt="alt" :class="$style.avatarImage" />
+      <NuxtImg
+        v-if="src"
+        :src="src"
+        :alt="alt"
+        :class="$style.avatarImage"
+        provider="ipx"
+        loading="lazy"
+      />
       <div v-else :class="$style.initials">{{ initials }}</div>
     </div>
     <div v-if="status" :class="[$style.statusBadge, $style[status]]"></div>
@@ -9,35 +16,39 @@
 </template>
 
 <script setup lang="ts">
-//todo: change the <img> for another component image or video using NuxtImg instead
-import { computed } from 'vue';
+import { computed } from "vue";
 defineOptions({ inheritAttrs: false });
 
 interface Props {
   src?: string;
   alt?: string;
   initials?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   color?: string;
-  status?: 'online' | 'offline' | 'busy';
+  status?: "online" | "offline" | "busy";
   shadow?: string | boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  size: 'md',
-  color: '#4f46e5',
+  size: "md",
+  color: "#4f46e5",
   shadow: true,
-  initials: '??'
+  initials: "??",
 });
 
 const avatarStyles = computed(() => {
-  const sizes = { sm: '32px', md: '48px', lg: '64px' };
+  const sizes = { sm: "32px", md: "48px", lg: "64px" };
   const DEFAULT_SHADOW = "0 4px 10px rgba(0,0,0,0.2)";
-  
+
   return {
-    '--a-size': sizes[props.size],
-    '--a-color': props.color,
-    '--a-shadow': typeof props.shadow === 'string' ? props.shadow : (props.shadow ? DEFAULT_SHADOW : 'none'),
+    "--a-size": sizes[props.size],
+    "--a-color": props.color,
+    "--a-shadow":
+      typeof props.shadow === "string"
+        ? props.shadow
+        : props.shadow
+          ? DEFAULT_SHADOW
+          : "none",
   };
 });
 </script>
@@ -84,7 +95,13 @@ const avatarStyles = computed(() => {
   border: 2px solid white;
 }
 
-.online { background: #10b981; }
-.offline { background: #9ca3af; }
-.busy { background: #ef4444; }
+.online {
+  background: #10b981;
+}
+.offline {
+  background: #9ca3af;
+}
+.busy {
+  background: #ef4444;
+}
 </style>

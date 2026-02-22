@@ -1,14 +1,20 @@
 <template>
   <div v-bind="$attrs" :class="$style.glassAvatar" :style="glassStyles">
     <div :class="$style.inner">
-      <img :src="src" :alt="alt" />
+      <NuxtImg
+        v-if="src"
+        :src="src"
+        :alt="alt"
+        :class="$style.avatarImage"
+        provider="ipx"
+        loading="lazy"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-//todo: change the <img> for another component image or video using NuxtImg instead
-import { computed } from 'vue';
+import { computed } from "vue";
 defineOptions({ inheritAttrs: false });
 
 const props = defineProps<{
@@ -18,7 +24,10 @@ const props = defineProps<{
 }>();
 
 const glassStyles = computed(() => ({
-  '--g-shadow': props.shadow === true ? "0 10px 15px -3px rgba(0, 0, 0, 0.2)" : (props.shadow || 'none')
+  "--g-shadow":
+    props.shadow === true
+      ? "0 10px 15px -3px rgba(0, 0, 0, 0.2)"
+      : props.shadow || "none",
 }));
 </script>
 

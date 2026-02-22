@@ -1,15 +1,21 @@
 <template>
   <div v-bind="$attrs" :class="$style.bubbleAvatar" :style="bubbleStyles">
     <div :class="$style.imageWrapper">
-      <img v-if="src" :src="src" :alt="alt" />
+      <NuxtImg
+        v-if="src"
+        :src="src"
+        :alt="alt"
+        :class="$style.avatarImage"
+        provider="ipx"
+        loading="lazy"
+      />
       <span v-else>{{ initials }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-//todo: change the <img> for another component image or video using NuxtImg instead
-import { computed } from 'vue';
+import { computed } from "vue";
 defineOptions({ inheritAttrs: false });
 
 const props = defineProps<{
@@ -21,8 +27,11 @@ const props = defineProps<{
 }>();
 
 const bubbleStyles = computed(() => ({
-  '--b-color': props.color || '#4f46e5',
-  '--b-shadow': props.shadow === true ? "0 8px 20px -5px rgba(0,0,0,0.3)" : (props.shadow || 'none')
+  "--b-color": props.color || "#4f46e5",
+  "--b-shadow":
+    props.shadow === true
+      ? "0 8px 20px -5px rgba(0,0,0,0.3)"
+      : props.shadow || "none",
 }));
 </script>
 

@@ -1,153 +1,167 @@
 <template>
-  <div v-bind="$attrs" :class="$style.buttonRoot">
-    <button
-      :class="$style.customButton"
-      :style="buttonStyles"
-      :disabled="disabled || loading"
-    >
-      <Icon 
-        v-if="loading" 
-        name="lucide:loader-2" 
-        :class="$style.iconSpin" 
-      />
-      
-      <Icon 
-        v-if="icon && !loading" 
-        :name="icon" 
-        :class="$style.buttonIcon"
-      />
-      
-      <span v-if="$slots.default" :class="$style.buttonContent">
-        <slot />
-      </span>
-    </button>
-  </div>
+  <button
+    v-bind="$attrs"
+    :class="$style.speedButton"
+    :style="buttonStyles"
+    :disabled="disabled || loading"
+  >
+    <div :class="$style.trail"></div>
+    
+    <Icon v-if="loading" name="lucide:loader-2" :class="$style.iconSpin" />
+    <Icon v-if="icon && !loading" :name="icon" :class="$style.buttonIcon" />
+
+    <span v-if="$slots.default" :class="$style.buttonContent">
+      <slot />
+    </span>
+
+    <div :class="$style.shimmer"></div>
+  </button>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from "vue";
 
-defineOptions({
-  inheritAttrs: false
-})
+defineOptions({ inheritAttrs: false });
 
 interface Props {
-  variant?: 'primary' | 'secondary' | 'outline';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: "primary" | "secondary" | "outline";
+  size?: "sm" | "md" | "lg";
+  block?: boolean;
   disabled?: boolean;
   loading?: boolean;
   icon?: string;
   color?: string;
-  hoverColor?: string;
   textColor?: string;
-  rounded?: string;
-  borderColor?: string;
-  borderSize?: string;
-  borderStyle?: string;
-  shadow?: string | boolean; 
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  variant: 'primary',
-  size: 'md',
+  variant: "primary",
+  size: "md",
+  block: false,
   disabled: false,
   loading: false,
-  icon: '',
-  color: '#4f46e5',
-  hoverColor: '#4338ca',
-  textColor: '#ffffff',
-  rounded: '0.5rem',
-  borderSize: '2px',
-  borderStyle: 'solid',
-  shadow: true
-})
-
-const DEFAULT_SHADOW = "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)";
+  icon: "",
+  color: "#ff004c", // Rojo "Turbo"
+  textColor: "#ffffff",
+});
 
 const buttonStyles = computed(() => {
-  const sizes = {
-    sm: { padding: '0.25rem 0.75rem', fontSize: '0.875rem' },
-    md: { padding: '0.5rem 1.25rem', fontSize: '1rem' },
-    lg: { padding: '0.75rem 2rem', fontSize: '1.125rem' }
-  }
+  const sizeMap = {
+    sm: { padding: "0.4rem 1.2rem", fontSize: "0.8rem", skew: "-12deg" },
+    md: { padding: "0.6rem 2rem", fontSize: "0.95rem", skew: "-15deg" },
+    lg: { padding: "1rem 3.5rem", fontSize: "1.1rem", skew: "-18deg" },
+  };
 
-  const selectedSize = sizes[props.size]
-
-  let finalShadow = "none";
-  if (typeof props.shadow === "string") {
-    finalShadow = props.shadow;
-  } else if (props.shadow === true) {
-    finalShadow = DEFAULT_SHADOW;
-  }
+  const currentSize = sizeMap[props.size];
 
   return {
-    '--btn-color': props.color,
-    '--btn-hover': props.hoverColor,
-    '--btn-text': props.textColor,
-    '--btn-radius': props.rounded,
-    '--btn-border-color': props.borderColor || props.color,
-    '--btn-border-size': props.borderSize,
-    '--btn-border-style': props.borderStyle,
-    '--btn-padding': selectedSize.padding,
-    '--btn-font-size': selectedSize.fontSize,
-    '--btn-bg': props.variant === 'outline' ? 'transparent' : props.color,
-    '--btn-text-final': props.variant === 'outline' ? props.color : props.textColor,
-    '--btn-opacity': (props.disabled || props.loading) ? '0.5' : '1',
-    '--btn-pointer': (props.disabled || props.loading) ? 'not-allowed' : 'pointer',
-    "--btn-shadow": finalShadow,
-  }
-})
+    "--btn-color": props.color,
+    "--btn-text": props.textColor,
+    "--btn-padding": currentSize.padding,
+    "--btn-font-size": currentSize.fontSize,
+    "--btn-skew": currentSize.skew,
+    "--btn-display": props.block ? "flex" : "inline-flex",
+    "--btn-width": props.block ? "100%" : "auto",
+  };
+});
 </script>
 
 <style module>
-.buttonRoot {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-.customButton {
-  display: inline-flex;
+.speedButton {
+  display: var(--btn-display);
+  width: var(--btn-width);
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-weight: 600;
-  border-radius: var(--btn-radius);
-  transition: all 0.2s ease;
-  outline: none;
-  box-sizing: border-box;
-  width: 100%;
+  font-weight: 900;
+  font-style: italic; /* Esencial para la sensación de velocidad */
+  text-transform: uppercase;
+  transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
   padding: var(--btn-padding);
   font-size: var(--btn-font-size);
-  background-color: var(--btn-bg);
-  color: var(--btn-text-final);
-  border: var(--btn-border-size) var(--btn-border-style) var(--btn-border-color);
-  opacity: var(--btn-opacity);
-  cursor: var(--btn-pointer);
-  box-shadow: var(--btn-shadow);
-  transform: skewX(-15deg);
-}
-
-.customButton:hover:not(:disabled) {
-  background-color: var(--btn-hover);
-  border-color: var(--btn-hover);
+  background-color: #000; /* Fondo oscuro base */
   color: var(--btn-text);
-  transform: skewX(-15deg) translateY(-2px);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+  
+  /* Inclinación aerodinámica */
+  transform: skewX(var(--btn-skew));
+  border-left: 5px solid var(--btn-color);
 }
 
-.buttonContent,
-.buttonIcon,
-.iconSpin {
-  transform: skewX(15deg);
-  display: inline-flex;
-  align-items: center;
+.speedButton::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--btn-color);
+  z-index: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.buttonContent, .buttonIcon, .iconSpin {
+  position: relative;
+  z-index: 1;
+  /* Corregimos la inclinación para el contenido */
+  transform: skewX(calc(var(--btn-skew) * -1));
+}
+
+.speedButton:hover:not(:disabled) {
+  transform: skewX(var(--btn-skew)) translateX(10px);
+  box-shadow: -15px 0 30px -10px var(--btn-color);
+}
+
+.speedButton:hover::before {
+  transform: scaleX(1);
+}
+
+.speedButton:hover .shimmer {
+  animation: nitro 0.6s forwards;
+}
+
+.shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  z-index: 2;
+  transform: skewX(var(--btn-skew));
+}
+
+@keyframes nitro {
+  100% { left: 150%; }
+}
+
+.speedButton:active:not(:disabled) {
+  transform: skewX(var(--btn-skew)) translateX(5px) scale(0.95);
+}
+
+.speedButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: skewX(var(--btn-skew));
 }
 
 .iconSpin {
-  animation: spin 1s linear infinite;
+  animation: spin 0.5s linear infinite; /* Rotación más rápida */
 }
 
 @keyframes spin {
-  from { transform: skewX(15deg) rotate(0deg); }
-  to { transform: skewX(15deg) rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

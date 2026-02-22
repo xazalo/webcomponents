@@ -5,7 +5,7 @@
         <div v-bind="$attrs" :class="$style.bubbleModal" :style="bubbleStyles">
           <div :class="$style.inner">
             <slot />
-            <button @click="$emit('update:modelValue', false)" :class="$style.close">Entendido</button>
+            <button @click="$emit('update:modelValue', false)" :class="$style.close">{{ buttonText }}</button>
           </div>
         </div>
       </div>
@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-const props = defineProps<{ modelValue: boolean; color?: string; shadow?: string | boolean }>();
+const props = defineProps<{ modelValue: boolean; color?: string; shadow?: string | boolean, buttonText: string }>();
 
 const bubbleStyles = computed(() => ({
   '--b-color': props.color || '#10b981',
