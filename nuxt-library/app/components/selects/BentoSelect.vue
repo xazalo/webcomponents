@@ -3,25 +3,44 @@
     <div :class="$style.container">
       <button 
         type="button"
-        :class="[$style.trigger, isOpen && $style.triggerOpen]" 
+        :class="[$style.trigger, isOpen && $style.triggerOpen, $style[size]]" 
         @click="isOpen = !isOpen"
+        :disabled="disabled"
       >
-        <span :class="$style.label">{{ selectedLabel || placeholder }}</span>
-        <svg :class="[$style.icon, isOpen && $style.iconRotated]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <div :class="$style.triggerContent">
+          <div v-if="showDecor" :class="$style.decorDot" />
+          <span :class="$style.label">{{ selectedLabel || placeholder }}</span>
+        </div>
+        
+        <svg :class="[$style.icon, isOpen && $style.iconRotated]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <path d="m6 9 6 6 6-6"/>
         </svg>
       </button>
       
-      <Transition name="bento-menu">
-        <div v-if="isOpen" :class="$style.menu">
-          <div 
-            v-for="opt in options" 
-            :key="opt.value" 
-            :class="[$style.item, modelValue === opt.value && $style.itemSelected]"
-            @click="selectOption(opt.value)"
-          >
-            {{ opt.label }}
-            <div v-if="modelValue === opt.value" :class="$style.checkDot"></div>
+      <Transition :name="$style.bentoMenuAnim">
+        <div v-if="isOpen" :class="[$style.menu, $style[`align-${menuAlign}`]]">
+          <header v-if="menuTitle" :class="$style.menuHeader">{{ menuTitle }}</header>
+          
+          <div :class="$style.optionsList">
+            <div 
+              v-for="opt in options" 
+              :key="opt.value" 
+              :class="[
+                $style.item, 
+                modelValue === opt.value && $style.itemSelected,
+                opt.disabled && $style.itemDisabled
+              ]"
+              @click="!opt.disabled && selectOption(opt.value)"
+            >
+              <div :class="$style.itemLabel">
+                {{ opt.label }}
+              </div>
+              <div v-if="modelValue === opt.value" :class="$style.checkMark">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+              </div>
+            </div>
           </div>
         </div>
       </Transition>
@@ -31,112 +50,170 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-const props = defineProps<{ 
-  modelValue: any; 
-  options: { label: string, value: any }[]; 
-  placeholder?: string; 
-  color?: string; 
-}>();
+defineOptions({ inheritAttrs: false });
 
-const emit = defineEmits(['update:modelValue']);
+interface Option {
+  label: string;
+  value: any;
+  disabled?: boolean;
+}
+
+interface Props {
+  modelValue: any;
+  options: Option[];
+  placeholder?: string;
+  color?: string;
+  // Configuración Bento
+  radius?: string;        /* Radio personalizado (ej: 1rem) */
+  size?: 'sm' | 'md' | 'lg';
+  menuAlign?: 'left' | 'right';
+  menuTitle?: string;     /* Título pequeño dentro del dropdown */
+  showDecor?: boolean;    /* El punto decorativo Bento en el trigger */
+  disabled?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  placeholder: 'Seleccionar...',
+  color: '#4f46e5',
+  radius: '0.85rem',
+  size: 'md',
+  menuAlign: 'left',
+  showDecor: true
+});
+
+const emit = defineEmits(['update:modelValue', 'change']);
 const isOpen = ref(false);
 
 const selectedLabel = computed(() => props.options.find(o => o.value === props.modelValue)?.label);
-const selectOption = (v: any) => { emit('update:modelValue', v); isOpen.value = false; };
+
+const selectOption = (v: any) => {
+  emit('update:modelValue', v);
+  emit('change', v);
+  isOpen.value = false;
+};
 
 const bentoStyles = computed(() => ({
-  '--b-accent': props.color || '#4f46e5',
+  '--b-accent': props.color,
+  '--b-radius': props.radius,
+  '--b-accent-soft': `color-mix(in srgb, ${props.color} 10%, white)`,
 }));
 </script>
 
 <style module>
+/* --- Animación Bento --- */
+.bentoMenuAnimEnterActive, .bentoMenuAnimLeaveActive {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bentoMenuAnimEnterFrom, .bentoMenuAnimLeaveTo {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
 .bentoRoot { width: 100%; font-family: system-ui, -apple-system, sans-serif; }
 .container { position: relative; }
 
+/* --- Trigger (El botón) --- */
 .trigger {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 0.8rem;
-  font-weight: 600;
-  font-size: 0.9rem;
+  border-radius: var(--b-radius);
   color: #1f2937;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.trigger:hover {
-  background: #f9fafb;
+.sm { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+.md { padding: 0.7rem 1rem; font-size: 0.9rem; }
+.lg { padding: 1rem 1.25rem; font-size: 1rem; }
+
+.triggerContent { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+
+.decorDot {
+  width: 8px; height: 8px; border-radius: 2px;
+  background: var(--b-accent); opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.trigger:hover:not(:disabled) {
+  background: #fdfdfd;
   border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .triggerOpen {
   border-color: var(--b-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--b-accent) 15%, transparent);
+  background: #ffffff;
 }
 
-.label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trigger:disabled { cursor: not-allowed; opacity: 0.6; background: #f3f4f6; }
 
-.icon { opacity: 0.4; transition: transform 0.3s ease; }
+.label { 
+  font-weight: 600; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap; 
+}
+
+.icon { opacity: 0.3; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .iconRotated { transform: rotate(180deg); opacity: 1; color: var(--b-accent); }
 
+/* --- Dropdown Menu --- */
 .menu {
   position: absolute;
-  top: calc(100% + 6px);
-  width: 100%;
+  top: calc(100% + 8px);
+  min-width: 100%;
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 0.8rem;
-  padding: 0.4rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--b-radius);
+  padding: 0.5rem;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+    0 0 0 1px rgba(0, 0, 0, 0.05);
   z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
+
+.align-left { left: 0; }
+.align-right { right: 0; }
+
+.menuHeader {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+.optionsList { display: flex; flex-direction: column; gap: 2px; }
 
 .item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: calc(var(--b-radius) * 0.7);
   cursor: pointer;
-  font-weight: 500;
-  font-size: 0.85rem;
-  color: #4b5563;
-  transition: all 0.15s ease;
+  transition: all 0.1s ease;
 }
 
-.item:hover {
-  background: #f3f4f6;
-  color: #111827;
+.itemLabel { font-size: 0.85rem; font-weight: 500; color: #4b5563; }
+
+.item:hover:not(.itemDisabled) {
+  background: #f9fafb;
 }
 
 .itemSelected {
-  background: color-mix(in srgb, var(--b-accent) 10%, white);
-  color: var(--b-accent);
-  font-weight: 600;
+  background: var(--b-accent-soft);
 }
 
-.checkDot {
-  width: 6px;
-  height: 6px;
-  background: var(--b-accent);
-  border-radius: 50%;
-}
+.itemSelected .itemLabel { color: var(--b-accent); font-weight: 700; }
 
-/* Animación de apertura estilo Bento */
-:global(.bento-menu-enter-active) {
-  transition: all 0.2s ease-out;
-}
-:global(.bento-menu-enter-from) {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.98);
-}
+.checkMark { color: var(--b-accent); display: flex; align-items: center; }
+
+.itemDisabled { opacity: 0.4; cursor: not-allowed; }
 </style>

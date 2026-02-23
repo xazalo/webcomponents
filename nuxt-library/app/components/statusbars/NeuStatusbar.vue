@@ -1,18 +1,18 @@
 <template>
-  <div :class="$style.neuContainer" :style="neuStyles">
+  <div v-bind="$attrs" :class="$style.neuRoot" :style="neuStyles">
     <div :class="$style.neuBar">
       
       <div :class="[$style.section, $style.insetPanel]">
-        <div :class="$style.statusLight"></div>
-        <span :class="$style.brandText">SYSTEM_LINK</span>
+        <div :class="[$style.statusLight, animated && $style.glowAnim]"></div>
+        <span :class="$style.brandText">{{ brandName }}</span>
       </div>
 
-      <div :class="[$style.section, $style.flexGrow]">
-        <span :class="$style.labelText">CPU</span>
+      <div v-if="showProgress" :class="[$style.section, $style.flexGrow]">
+        <span :class="$style.labelText">{{ progressLabel }}</span>
         <div :class="$style.track">
-          <div :class="$style.progress" :style="{ width: load + '%' }"></div>
+          <div :class="$style.progress" :style="{ width: loadValue + '%' }"></div>
         </div>
-        <span :class="$style.valueText">{{ load }}%</span>
+        <span :class="$style.valueText">{{ loadValue }}%</span>
       </div>
 
       <div :class="[$style.section, $style.timePanel]">
@@ -24,11 +24,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{ color?: string }>();
-const load = ref(42);
+interface Props {
+  brandName?: string;
+  progressLabel?: string;
+  loadValue?: number;
+  color?: string;       /* Color de acento */
+  // Neu Tuning
+  baseBg?: string;      /* Color de fondo (Clave para el efecto) */
+  distance?: number;    /* Distancia de la sombra (5-15) */
+  intensity?: number;   /* Opacidad de las sombras (0-1) */
+  blur?: number;        /* Difuminado de la sombra */
+  radius?: string;      /* Redondez */
+  animated?: boolean;
+  showProgress?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  brandName: 'SYSTEM_LINK',
+  progressLabel: 'CPU',
+  loadValue: 42,
+  color: '#4f46e5',
+  baseBg: '#e0e5ec',
+  distance: 8,
+  intensity: 0.2,
+  blur: 16,
+  radius: '20px',
+  animated: true,
+  showProgress: true
+});
+
 const currentTime = ref('00:00');
+let timer: any = null;
 
 const updateTime = () => {
   const now = new Date();
@@ -39,122 +68,127 @@ const updateTime = () => {
 
 onMounted(() => {
   updateTime();
-  setInterval(updateTime, 1000);
+  timer = setInterval(updateTime, 1000);
 });
 
-const neuStyles = computed(() => ({
-  '--n-bg': '#e0e5ec',
-  '--n-accent': props.color || '#4f46e5',
-  '--n-shadow-dark': 'rgba(163, 177, 198, 0.8)',
-  '--n-shadow-light': 'rgba(255, 255, 255, 0.9)',
-}));
+onUnmounted(() => clearInterval(timer));
+
+const neuStyles = computed(() => {
+  const d = props.distance;
+  const b = props.blur;
+  const i = props.intensity;
+  
+  return {
+    '--n-bg': props.baseBg,
+    '--n-accent': props.color,
+    '--n-radius': props.radius,
+    // Sombras calculadas
+    '--n-shadow-dark': `rgba(0, 0, 0, ${i})`,
+    '--n-shadow-light': `rgba(255, 255, 255, ${i + 0.6})`,
+    '--n-dist': `${d}px`,
+    '--n-blur': `${b}px`,
+  };
+});
 </script>
 
 <style module>
-.neuContainer {
-  padding: 40px;
+.neuRoot {
+  width: fit-content;
+  padding: 20px;
   background: var(--n-bg);
-  border-radius: 30px;
-  display: flex;
-  justify-content: center;
+  border-radius: calc(var(--n-radius) * 1.5);
 }
 
 .neuBar {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 12px 25px;
+  gap: 15px;
+  padding: 10px 20px;
   background: var(--n-bg);
-  border-radius: 20px;
+  border-radius: var(--n-radius);
   
-  /* Elevación principal de la barra */
+  /* Elevación principal */
   box-shadow: 
-    9px 9px 16px var(--n-shadow-dark), 
-    -9px -9px 16px var(--n-shadow-light);
+    var(--n-dist) var(--n-dist) var(--n-blur) var(--n-shadow-dark), 
+    calc(var(--n-dist) * -1) calc(var(--n-dist) * -1) var(--n-blur) var(--n-shadow-light);
   
-  width: fit-content;
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
-.section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.section { display: flex; align-items: center; gap: 12px; }
+.flexGrow { flex-grow: 1; min-width: 220px; }
 
-.flexGrow { flex-grow: 1; min-width: 200px; }
-
-/* Panel Inset (Hundido) */
+/* Efecto Inset (Hundido) */
 .insetPanel {
   padding: 8px 15px;
-  border-radius: 12px;
-  box-shadow: 
-    inset 3px 3px 6px var(--n-shadow-dark), 
-    inset -3px -3px 6px var(--n-shadow-light);
-}
-
-.statusLight {
-  width: 8px;
-  height: 8px;
-  background: #4ade80;
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
-}
-
-.brandText {
-  color: #7a8ba9;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.labelText {
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #9baacf;
-}
-
-/* Track de carga hundido */
-.track {
-  height: 10px;
-  flex-grow: 1;
-  background: var(--n-bg);
-  border-radius: 10px;
+  border-radius: calc(var(--n-radius) * 0.6);
   box-shadow: 
     inset 2px 2px 5px var(--n-shadow-dark), 
     inset -2px -2px 5px var(--n-shadow-light);
+}
+
+.statusLight {
+  width: 8px; height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.4);
+}
+
+.glowAnim { animation: glow 2s ease-in-out infinite; }
+@keyframes glow {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.6; filter: brightness(1.2); }
+}
+
+.brandText {
+  color: #7a8ba9; font-size: 0.65rem;
+  font-weight: 800; letter-spacing: 0.1em;
+}
+
+.labelText {
+  font-size: 0.7rem; font-weight: 800;
+  color: #9baacf; margin-right: 4px;
+}
+
+/* Track Hundido con precisión */
+.track {
+  height: 12px; flex-grow: 1;
+  background: var(--n-bg);
+  border-radius: 20px;
+  box-shadow: 
+    inset 2px 2px 4px var(--n-shadow-dark), 
+    inset -2px -2px 4px var(--n-shadow-light);
   overflow: hidden;
-  padding: 2px;
+  padding: 3px;
 }
 
 .progress {
   height: 100%;
   background: var(--n-accent);
-  border-radius: 10px;
-  box-shadow: 2px 0 4px rgba(0,0,0,0.1);
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 20px;
+  transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
 .valueText {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #7a8ba9;
-  min-width: 35px;
+  font-size: 0.8rem; font-weight: 800;
+  color: #7a8ba9; min-width: 40px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Panel de Tiempo con elevación extra */
+/* Panel Elevado (Extruded) */
 .timePanel {
-  padding: 8px 20px;
-  border-radius: 12px;
+  padding: 8px 18px;
+  border-radius: calc(var(--n-radius) * 0.6);
   background: var(--n-bg);
   box-shadow: 
-    4px 4px 8px var(--n-shadow-dark), 
-    -4px -4px 8px var(--n-shadow-light);
+    calc(var(--n-dist) / 2) calc(var(--n-dist) / 2) var(--n-blur) var(--n-shadow-dark), 
+    calc(var(--n-dist) / -2) calc(var(--n-dist) / -2) var(--n-blur) var(--n-shadow-light);
 }
 
 .time {
   color: var(--n-accent);
-  font-size: 0.9rem;
-  font-weight: 800;
+  font-size: 0.9rem; font-weight: 900;
+  letter-spacing: -0.5px;
 }
 </style>

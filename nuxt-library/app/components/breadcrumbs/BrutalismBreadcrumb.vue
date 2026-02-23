@@ -1,8 +1,16 @@
 <template>
-  <nav v-bind="$attrs" :class="$style.brutalNav" :style="navStyles">
+  <nav 
+    v-bind="$attrs" 
+    :class="[$style.brutalNav, $style[orientation]]" 
+    :style="navStyles"
+  >
     <ol :class="$style.list">
       <li v-for="(item, index) in items" :key="index" :class="$style.item">
-        <NuxtLink :to="item.to" :class="$style.brutalLink">
+        <NuxtLink 
+          :to="item.to" 
+          :class="[$style.brutalLink, $style[size]]"
+          :active-class="$style.activeLink"
+        >
           <span v-if="item.icon" :class="$style.icon">{{ item.icon }}</span>
           <span :class="$style.label">{{ item.label }}</span>
         </NuxtLink>
@@ -21,13 +29,44 @@ interface NavItem {
   icon?: string;
 }
 
-const props = defineProps<{
+interface Props {
   items: NavItem[];
-  color?: string; // Color para el estado hover/activo
-}>();
+  // Colores
+  accentColor?: string;   /* Color al pasar el ratón / activo */
+  baseColor?: string;     /* Color de fondo del botón */
+  shadowColor?: string;   /* Color de la sombra sólida */
+  borderColor?: string;   /* Color del borde */
+  textColor?: string;     /* Color del texto */
+  // Estructura
+  size?: 'sm' | 'md' | 'lg';
+  orientation?: 'horizontal' | 'vertical';
+  borderWidth?: string;   /* Grosor del trazo */
+  shadowSize?: string;    /* Qué tanto sobresale la sombra */
+  borderRadius?: string;  /* Por defecto 0 (cuadrado) */
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  accentColor: '#bc95ff',
+  baseColor: '#ffffff',
+  shadowColor: '#000000',
+  borderColor: '#000000',
+  textColor: '#000000',
+  size: 'md',
+  orientation: 'horizontal',
+  borderWidth: '3px',
+  shadowSize: '5px',
+  borderRadius: '0px'
+});
 
 const navStyles = computed(() => ({
-  '--b-accent': props.color || '#bc95ff', // Un púrpura vibrante por defecto
+  '--brutal-accent': props.accentColor,
+  '--brutal-bg': props.baseColor,
+  '--brutal-shadow': props.shadowColor,
+  '--brutal-border': props.borderColor,
+  '--brutal-text': props.textColor,
+  '--brutal-bw': props.borderWidth,
+  '--brutal-sw': props.shadowSize,
+  '--brutal-radius': props.borderRadius,
 }));
 </script>
 
@@ -37,65 +76,65 @@ const navStyles = computed(() => ({
   padding: 0.5rem;
 }
 
+.vertical { display: block; width: max-content; }
+
 .list {
   display: flex;
-  gap: 1rem; /* Más espacio para que las sombras no choquen */
+  gap: calc(var(--brutal-sw) + 0.5rem);
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.item {
-  display: flex;
-  align-items: center;
-}
+.vertical .list { flex-direction: column; }
 
 .brutalLink {
+  position: relative;
   padding: 0.7rem 1.4rem;
-  background: white;
-  /* Bordes negros gruesos obligatorios */
-  border: 3px solid #000000;
-  border-radius: 0; /* Neo-brutalismo suele ser cuadrado o con radio muy pequeño */
+  background: var(--brutal-bg);
+  border: var(--brutal-bw) solid var(--brutal-border);
+  border-radius: var(--brutal-radius);
   text-decoration: none;
-  color: #000000;
-  font-weight: 800;
-  font-size: 0.9rem;
-  text-transform: uppercase; /* Da más fuerza al diseño */
+  color: var(--brutal-text);
+  font-weight: 900;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  
-  /* Sombra sólida sin blur */
-  box-shadow: 4px 4px 0px 0px #000000;
-  
-  transition: all 0.1s ease-in-out;
-  position: relative;
+  /* Sombra brutalista pura */
+  box-shadow: var(--brutal-sw) var(--brutal-sw) 0px 0px var(--brutal-shadow);
+  transition: all 0.1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+  white-space: nowrap;
 }
 
+/* Tamaños */
+.sm { padding: 0.4rem 0.8rem; font-size: 0.7rem; --brutal-sw: 3px; }
+.md { padding: 0.7rem 1.4rem; font-size: 0.9rem; }
+.lg { padding: 1rem 2rem; font-size: 1.1rem; --brutal-sw: 8px; }
+
 .brutalLink:hover {
-  background: var(--b-accent);
+  background: var(--brutal-accent);
   transform: translate(-2px, -2px);
-  box-shadow: 7px 7px 0px 0px #000000;
+  box-shadow: calc(var(--brutal-sw) + 2px) calc(var(--brutal-sw) + 2px) 0px 0px var(--brutal-shadow);
+}
+
+.activeLink {
+  background: var(--brutal-accent);
 }
 
 .brutalLink:active {
-  /* Efecto de hundimiento real */
-  transform: translate(4px, 4px);
-  box-shadow: 0px 0px 0px 0px #000000;
+  transform: translate(var(--brutal-sw), var(--brutal-sw));
+  box-shadow: 0px 0px 0px 0px var(--brutal-shadow);
 }
 
-.icon {
-  font-size: 1.2rem;
-  /* Los iconos en este estilo a veces llevan su propio borde */
-}
+.icon { font-size: 1.2em; }
+.label { letter-spacing: 0.05em; }
 
-.label {
-  letter-spacing: 0.05em;
-}
-
-/* Estilo para el link activo de Nuxt */
-:global(.router-link-active) .brutalLink {
-  background: var(--b-accent);
-  box-shadow: 4px 4px 0px 0px #000000;
+@media (max-width: 640px) {
+  .brutalNav {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
 }
 </style>

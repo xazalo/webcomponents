@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.glassAlert, $style[type]]">
+  <div :class="[$style.glassAlert, $style[type]]" :style="dynamicStyles">
     <div :class="$style.glow"></div>
     
     <div :class="$style.header">
@@ -27,24 +27,53 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+interface Props {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'error' | 'success';
   actionText: string;
   buttonText: string;
-}>();
+  // Prop-driven customization
+  accentColor?: string;
+  glassColor?: string;
+  textColor?: string;
+  blurAmount?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  glassColor: 'rgba(255, 255, 255, 0.15)',
+  textColor: '#ffffff',
+  blurAmount: '15px'
+});
 
 defineEmits(['close', 'action']);
+
+const dynamicStyles = computed(() => {
+  const typeColors = {
+    info: '#00d1ff',
+    warning: '#ffb800',
+    error: '#ff4b4b',
+    success: '#00ff66'
+  };
+
+  const selectedAccent = props.accentColor || typeColors[props.type];
+
+  return {
+    '--type-color': selectedAccent,
+    '--glass-bg': props.glassColor,
+    '--glass-white': props.textColor,
+    '--blur-val': props.blurAmount,
+    /* Auto-generate border color based on text color opacity */
+    '--glass-border': props.textColor.includes('rgba') 
+      ? props.textColor 
+      : `${props.textColor}66` // Appends 40% hex alpha if it's a standard hex
+  };
+});
 </script>
 
 <style module>
-:root {
-  --glass-white: rgba(255, 255, 255, 1);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --glass-bg: rgba(255, 255, 255, 0.15);
-}
-J
 .glassAlert {
   display: flex;
   flex-direction: column;
@@ -53,28 +82,27 @@ J
   position: relative;
   overflow: hidden;
   
-  /* El corazón del Glassmorphism */
+  /* Core Glassmorphism Logic */
   background: var(--glass-bg);
-  backdrop-filter: blur(15px) saturate(160%);
-  -webkit-backdrop-filter: blur(15px) saturate(160%);
+  backdrop-filter: blur(var(--blur-val)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-val)) saturate(160%);
   
   border-radius: 28px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
   
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--glass-white);
 }
 
-/* Un gradiente interno que le da profundidad de color según el tipo */
 .glow {
   position: absolute;
-  top: -50%;
-  left: -50%;
+  top: -20%;
+  left: -20%;
   width: 100%;
   height: 100%;
   background: radial-gradient(circle, var(--type-color) 0%, transparent 70%);
-  opacity: 0.15;
+  opacity: 0.2;
   pointer-events: none;
 }
 
@@ -83,52 +111,48 @@ J
   align-items: center;
   gap: 18px;
   margin-bottom: 20px;
+  position: relative;
 }
 
 .iconAmbient {
   width: 44px;
   height: 44px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 1.2rem;
-  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.1);
-}
-
-.systemLabel {
-  font-size: 0.65rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-weight: 700;
-  opacity: 0.6;
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05);
 }
 
 .title {
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 1.4rem;
   font-weight: 600;
   letter-spacing: -0.5px;
+  color: var(--glass-white);
 }
 
 .body {
   margin-bottom: 25px;
+  position: relative;
 }
 
 .message {
   margin: 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 400;
+  color: var(--glass-white);
+  opacity: 0.85;
 }
 
 .footer {
   display: flex;
   gap: 12px;
+  position: relative;
 }
 
 .primaryBtn {
@@ -140,41 +164,41 @@ J
   border-radius: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s, opacity 0.2s;
+  transition: transform 0.2s, filter 0.2s;
 }
 
 .primaryBtn:hover {
   transform: translateY(-2px);
-  opacity: 0.9;
+  filter: brightness(0.9);
 }
 
 .secondaryBtn {
   flex: 1;
   background: rgba(255, 255, 255, 0.1);
   color: var(--glass-white);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 12px;
   border-radius: 14px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
 .secondaryBtn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Variantes de Color Atmosférico */
-.info { --type-color: #00d1ff; }
-.warning { --type-color: #ffb800; }
-.error { --type-color: #ff4b4b; }
-.success { --type-color: #00ff66; }
-
-/* Borde dinámico según el tipo */
+/* Side highlight based on type */
 .glassAlert::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; width: 4px; height: 100%;
+  top: 0; 
+  left: 0; 
+  width: 4px; 
+  height: 100%;
   background: var(--type-color);
+  box-shadow: 0 0 15px var(--type-color);
   opacity: 0.8;
+  z-index: 2;
 }
 </style>

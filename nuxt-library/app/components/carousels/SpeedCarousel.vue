@@ -1,10 +1,10 @@
 <template>
   <div :class="$style.wrapper" :style="carouselStyles">
-    <button @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Anterior">
+    <button v-if="showControls" @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Anterior">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
     </button>
     
-    <button @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
+    <button v-if="showControls" @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
 
@@ -23,10 +23,12 @@
           :class="$style.slide"
           :style="{ '--slide-aspect': item.aspectRatio || defaultAspectRatio }"
         >
-          <div :class="$style.speedFrame">
-            <div :class="$style.speedLine" style="top: 20%; --d: 0.1s" />
-            <div :class="$style.speedLine" style="top: 50%; --d: 0.5s" />
-            <div :class="$style.speedLine" style="top: 80%; --d: 0.3s" />
+          <div :class="$style.speedFrame" @click="$emit('select', item)">
+            <template v-if="showEffects">
+              <div :class="$style.speedLine" style="top: 20%; --d: 0.1s" />
+              <div :class="$style.speedLine" style="top: 50%; --d: 0.5s" />
+              <div :class="$style.speedLine" style="top: 80%; --d: 0.3s" />
+            </template>
 
             <div :class="$style.imageSkew">
               <MediaRender :url="item.url" :alt="item.alt" :class="$style.media" />
@@ -54,25 +56,32 @@ interface CarouselItem {
   alt?: string;
   label?: string;
   aspectRatio?: string;
-  width?: string;
 }
 
-const props = withDefaults(defineProps<{
+interface Props {
   items: CarouselItem[];
   defaultAspectRatio?: string;
-  defaultSlideWidth?: string;
   gap?: string;
-  color?: string;
-  radius?: string;
-  showScrollbar?: boolean;
-}>(), {
+  accentColor?: string;     // The "Racing" color
+  baseColor?: string;       // Background behind the skew
+  cardHeight?: string;
+  skewAngle?: number;       // Degree of lean (default 4)
+  showEffects?: boolean;    // Toggle speed lines
+  showControls?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
   defaultAspectRatio: '1/1',
-  defaultSlideWidth: 'auto',
   gap: '12px',
-  color: '#ff003c',
-  radius: '0px',
-  showScrollbar: false
+  accentColor: '#ff003c',
+  baseColor: '#0f0f0f',
+  cardHeight: '420px',
+  skewAngle: 4,
+  showEffects: true,
+  showControls: true
 });
+
+defineEmits(['select']);
 
 const carouselRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
@@ -80,7 +89,6 @@ let startX: number, scrollLeft: number;
 
 const scroll = (dir: 'next' | 'prev') => {
   if (!carouselRef.value) return;
-  // Scroll basado en el 80% del ancho del contenedor para mayor fluidez
   const scrollAmount = carouselRef.value.clientWidth * 0.8;
   carouselRef.value.scrollBy({ 
     left: dir === 'next' ? scrollAmount : -scrollAmount, 
@@ -93,9 +101,7 @@ const startDragging = (e: MouseEvent) => {
   startX = e.pageX - (carouselRef.value?.offsetLeft || 0);
   scrollLeft = carouselRef.value?.scrollLeft || 0;
 };
-
 const stopDragging = () => { isDragging.value = false; };
-
 const onDragging = (e: MouseEvent) => {
   if (!isDragging.value || !carouselRef.value) return;
   e.preventDefault();
@@ -104,9 +110,14 @@ const onDragging = (e: MouseEvent) => {
 };
 
 const carouselStyles = computed(() => ({
-  '--c-accent': props.color,
+  '--c-accent': props.accentColor,
+  '--c-base': props.baseColor,
   '--c-gap': props.gap,
-  '--c-radius': props.radius,
+  '--c-height': props.cardHeight,
+  '--skew-deg': `${props.skewAngle}deg`,
+  '--skew-deg-neg': `-${props.skewAngle}deg`,
+  '--skew-btn': `-${props.skewAngle * 3}deg`,
+  '--skew-btn-rev': `${props.skewAngle * 3}deg`,
 }));
 </script>
 
@@ -114,9 +125,9 @@ const carouselStyles = computed(() => ({
 .wrapper {
   position: relative;
   width: 100%;
-  --speed-black: #0f0f0f;
   display: flex;
   align-items: center;
+  overflow: hidden;
 }
 
 .carouselRoot {
@@ -146,9 +157,9 @@ const carouselStyles = computed(() => ({
 .slide {
   flex: 0 0 auto;
   aspect-ratio: var(--slide-aspect);
-  height: 420px;
+  height: var(--c-height);
   scroll-snap-align: start;
-  transform: skewX(-4deg);
+  transform: skewX(var(--skew-deg-neg));
   transition: transform 0.3s ease;
 }
 
@@ -156,17 +167,18 @@ const carouselStyles = computed(() => ({
   position: relative;
   width: 100%;
   height: 100%;
-  background: var(--speed-black);
+  background: var(--c-base);
   border-right: 6px solid var(--c-accent);
   overflow: hidden;
   box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+  cursor: pointer;
 }
 
 .imageSkew {
-  width: 130%; 
+  width: 140%; 
   height: 100%;
-  margin-left: -15%;
-  transform: skewX(4deg);
+  margin-left: -20%;
+  transform: skewX(var(--skew-deg));
   overflow: hidden;
 }
 
@@ -174,16 +186,16 @@ const carouselStyles = computed(() => ({
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(0.4) contrast(1.2);
+  filter: grayscale(0.4) contrast(1.1);
   transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .slide:hover .media {
-  filter: grayscale(0) contrast(1.4);
-  transform: scale(1.1) translateX(15px);
+  filter: grayscale(0) contrast(1.3);
+  transform: scale(1.1) translateX(10px);
 }
 
-/* Navegación Speed */
+/* --- High Velocity Controls --- */
 .navBtn {
   position: absolute;
   z-index: 50;
@@ -197,25 +209,25 @@ const carouselStyles = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateY(-50%) skewX(-12deg);
+  transform: translateY(-50%) skewX(var(--skew-btn));
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 10px 0 20px rgba(0,0,0,0.3);
 }
 
 .navBtn:hover {
   background: white;
-  color: var(--speed-black);
+  color: #000;
   width: 65px;
 }
 
 .navBtn svg {
-  transform: skewX(12deg); /* Enderezar el icono */
+  transform: skewX(var(--skew-btn-rev));
 }
 
 .prevBtn { left: -10px; }
 .nextBtn { right: -10px; }
 
-/* Líneas de Velocidad */
+/* --- Animated Speed Lines --- */
 .speedLine {
   position: absolute;
   left: -150px;
@@ -225,14 +237,14 @@ const carouselStyles = computed(() => ({
   opacity: 0.4;
   z-index: 10;
   pointer-events: none;
-  animation: rush 0.6s linear infinite;
+  animation: rush 0.8s linear infinite;
   animation-delay: var(--d);
 }
 
 @keyframes rush {
   0% { transform: translateX(0); opacity: 0; }
-  50% { opacity: 0.7; }
-  100% { transform: translateX(1400px); opacity: 0; }
+  20% { opacity: 0.7; }
+  100% { transform: translateX(1200px); opacity: 0; }
 }
 
 .labelContainer {
@@ -252,7 +264,7 @@ const carouselStyles = computed(() => ({
 .fastText {
   display: block;
   color: white;
-  font-family: 'Inter', sans-serif;
+  font-family: sans-serif;
   font-style: italic;
   font-weight: 900;
   text-transform: uppercase;
@@ -274,7 +286,7 @@ const carouselStyles = computed(() => ({
 }
 
 @media (max-width: 768px) {
-  .slide { height: 320px; transform: skewX(-2deg); }
-  .navBtn { display: none; } /* En móvil suele bastar con el scroll táctil */
+  .slide { height: calc(var(--c-height) * 0.75); transform: skewX(-2deg); }
+  .navBtn { display: none; }
 }
 </style>

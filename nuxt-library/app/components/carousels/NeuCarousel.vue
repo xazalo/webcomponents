@@ -1,10 +1,10 @@
 <template>
   <div :class="$style.wrapper" :style="carouselStyles">
-    <button @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
+    <button v-if="showControls" @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
     </button>
     
-    <button @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Adelante">
+    <button v-if="showControls" @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Adelante">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
 
@@ -23,7 +23,7 @@
           :class="$style.slide"
           :style="{ '--slide-aspect': item.aspectRatio || defaultAspectRatio }"
         >
-          <div :class="$style.neuFrame">
+          <div :class="$style.neuFrame" @click="$emit('select', item)">
             <div :class="$style.mediaInset">
               <MediaRender :url="item.url" :alt="item.alt" :class="$style.media" />
             </div>
@@ -49,22 +49,34 @@ interface CarouselItem {
   aspectRatio?: string;
 }
 
-const props = withDefaults(defineProps<{
+interface Props {
   items: CarouselItem[];
   defaultAspectRatio?: string;
-  defaultSlideWidth?: string;
   gap?: string;
-  color?: string;
-  radius?: string;
-  showScrollbar?: boolean;
-}>(), {
+  baseColor?: string;     // The "Surface" color
+  lightSource?: string;   // The highlight color
+  shadowSource?: string;  // The dark shadow color
+  accentColor?: string;   // For hover states
+  borderRadius?: string;
+  cardHeight?: string;
+  depth?: number;         // Scale of the shadows (1-10)
+  showControls?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
   defaultAspectRatio: '1/1',
-  defaultSlideWidth: 'auto',
   gap: '35px',
-  color: '#e0e5ec',
-  radius: '40px',
-  showScrollbar: false
+  baseColor: '#e0e5ec',
+  lightSource: '#ffffff',
+  shadowSource: '#a3b1c6',
+  accentColor: '#4f46e5',
+  borderRadius: '40px',
+  cardHeight: '400px',
+  depth: 6,
+  showControls: true
 });
+
+defineEmits(['select']);
 
 const carouselRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
@@ -93,9 +105,15 @@ const onDragging = (e: MouseEvent) => {
 };
 
 const carouselStyles = computed(() => ({
-  '--c-accent': props.color,
+  '--neu-base': props.baseColor,
+  '--neu-light': props.lightSource,
+  '--neu-shadow': props.shadowSource,
+  '--c-accent': props.accentColor,
   '--c-gap': props.gap,
-  '--c-radius': props.radius,
+  '--c-radius': props.borderRadius,
+  '--c-height': props.cardHeight,
+  '--d-outer': `${props.depth * 1.5}px`,
+  '--d-inner': `${props.depth}px`,
 }));
 </script>
 
@@ -103,9 +121,7 @@ const carouselStyles = computed(() => ({
 .wrapper {
   position: relative;
   width: 100%;
-  --neu-base: #e0e5ec; 
-  --neu-light: #ffffff;
-  --neu-shadow: #a3b1c6;
+  background: var(--neu-base);
   display: flex;
   align-items: center;
 }
@@ -117,6 +133,7 @@ const carouselStyles = computed(() => ({
   scroll-snap-type: x mandatory;
   padding: 50px 0;
   scrollbar-width: none;
+  cursor: grab;
 }
 
 .carouselRoot::-webkit-scrollbar { display: none; }
@@ -136,11 +153,11 @@ const carouselStyles = computed(() => ({
 .slide {
   flex: 0 0 auto;
   aspect-ratio: var(--slide-aspect);
-  height: 400px;
+  height: var(--c-height);
   scroll-snap-align: center;
 }
 
-/* --- Botones de Navegación Neumórficos --- */
+/* --- Neumorphic Controls --- */
 .navBtn {
   position: absolute;
   z-index: 10;
@@ -154,19 +171,19 @@ const carouselStyles = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 6px 6px 12px var(--neu-shadow), 
-              -6px -6px 12px var(--neu-light);
-  transition: all 0.2s ease;
+  box-shadow: var(--d-inner) var(--d-inner) calc(var(--d-inner) * 2) var(--neu-shadow), 
+              calc(var(--d-inner) * -1) calc(var(--d-inner) * -1) calc(var(--d-inner) * 2) var(--neu-light);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .navBtn:hover {
-  color: #4f46e5;
+  color: var(--c-accent);
 }
 
 .navBtn:active {
   box-shadow: inset 4px 4px 8px var(--neu-shadow), 
               inset -4px -4px 8px var(--neu-light);
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 .prevBtn { left: 15px; }
@@ -181,23 +198,25 @@ const carouselStyles = computed(() => ({
   padding: 20px;
   display: flex;
   flex-direction: column;
-  box-shadow: 9px 9px 16px var(--neu-shadow), 
-              -9px -9px 16px var(--neu-light);
-  transition: all 0.3s ease;
+  box-shadow: var(--d-outer) var(--d-outer) calc(var(--d-outer) * 2) var(--neu-shadow), 
+              calc(var(--d-outer) * -1) calc(var(--d-outer) * -1) calc(var(--d-outer) * 2) var(--neu-light);
+  transition: all 0.4s ease;
+  cursor: pointer;
 }
 
 .slide:hover .neuFrame {
-  box-shadow: 12px 12px 20px var(--neu-shadow), 
-              -12px -12px 20px var(--neu-light);
+  transform: translateY(-5px);
+  box-shadow: calc(var(--d-outer) * 1.3) calc(var(--d-outer) * 1.3) calc(var(--d-outer) * 2.5) var(--neu-shadow), 
+              calc(var(--d-outer) * -1.3) calc(var(--d-outer) * -1.3) calc(var(--d-outer) * 2.5) var(--neu-light);
 }
 
 .mediaInset {
   width: 100%;
   height: 100%;
-  border-radius: 25px;
+  border-radius: calc(var(--c-radius) * 0.6);
   overflow: hidden;
-  box-shadow: inset 6px 6px 12px var(--neu-shadow), 
-              inset -6px -6px 12px var(--neu-light);
+  box-shadow: inset var(--d-inner) var(--d-inner) calc(var(--d-inner) * 2) var(--neu-shadow), 
+              inset calc(var(--d-inner) * -1) calc(var(--d-inner) * -1) calc(var(--d-inner) * 2) var(--neu-light);
   background: var(--neu-base);
 }
 
@@ -205,8 +224,8 @@ const carouselStyles = computed(() => ({
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.9;
-  mix-blend-mode: multiply; 
+  opacity: 0.95;
+  mix-blend-mode: multiply; /* Helps the image sit "into" the background */
 }
 
 .neuLabel {
@@ -219,13 +238,18 @@ const carouselStyles = computed(() => ({
   letter-spacing: 1px;
   text-align: center;
   background: var(--neu-base);
-  border-radius: 15px;
+  border-radius: calc(var(--c-radius) * 0.4);
   box-shadow: 4px 4px 8px var(--neu-shadow), 
               -4px -4px 8px var(--neu-light);
+  transition: color 0.3s ease;
+}
+
+.slide:hover .neuLabel {
+  color: var(--c-accent);
 }
 
 @media (max-width: 768px) {
-  .slide { height: 320px; }
+  .slide { height: calc(var(--c-height) * 0.8); }
   .navBtn { display: none; }
 }
 </style>

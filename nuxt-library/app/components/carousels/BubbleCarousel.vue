@@ -1,10 +1,10 @@
 <template>
   <div :class="$style.wrapper" :style="carouselStyles">
-    <button @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
+    <button v-if="showControls" @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
     </button>
     
-    <button @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
+    <button v-if="showControls" @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
 
@@ -30,8 +30,10 @@
               {{ item.label }}
             </div>
 
-            <button :class="$style.actionBtn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <button v-if="showActionButton" :class="$style.actionBtn" @click.stop="$emit('action', item)">
+              <slot name="action-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </slot>
             </button>
           </div>
         </div>
@@ -49,25 +51,36 @@ interface CarouselItem {
   alt?: string;
   label?: string;
   aspectRatio?: string;
-  width?: string;
 }
 
-const props = withDefaults(defineProps<{
+interface Props {
   items: CarouselItem[];
   defaultAspectRatio?: string;
-  defaultSlideWidth?: string;
   gap?: string;
-  color?: string;
-  radius?: string;
-  showScrollbar?: boolean;
-}>(), {
+  accentColor?: string;
+  borderRadius?: string;
+  cardHeight?: string;
+  frameBorderWidth?: string;
+  hoverRotation?: string;
+  pillBg?: string;
+  showControls?: boolean;
+  showActionButton?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
   defaultAspectRatio: '1/1',
-  defaultSlideWidth: 'auto',
   gap: '24px',
-  color: '#4f46e5',
-  radius: '60px',
-  showScrollbar: false
+  accentColor: '#4f46e5',
+  borderRadius: '60px',
+  cardHeight: '400px',
+  frameBorderWidth: '6px',
+  hoverRotation: '1.5deg',
+  pillBg: 'rgba(255, 255, 255, 0.75)',
+  showControls: true,
+  showActionButton: true
 });
+
+const emit = defineEmits(['action']);
 
 const carouselRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
@@ -96,9 +109,13 @@ const onDragging = (e: MouseEvent) => {
 };
 
 const carouselStyles = computed(() => ({
-  '--c-accent': props.color,
+  '--c-accent': props.accentColor,
   '--c-gap': props.gap,
-  '--c-radius': props.radius,
+  '--c-radius': props.borderRadius,
+  '--c-height': props.cardHeight,
+  '--b-width': props.frameBorderWidth,
+  '--h-rot': props.hoverRotation,
+  '--pill-bg': props.pillBg
 }));
 </script>
 
@@ -106,8 +123,6 @@ const carouselStyles = computed(() => ({
 .wrapper {
   position: relative;
   width: 100%;
-  --bubble-bg: rgba(255, 255, 255, 0.75);
-  --bubble-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
 }
@@ -139,11 +154,11 @@ const carouselStyles = computed(() => ({
 .slide {
   flex: 0 0 auto;
   aspect-ratio: var(--slide-aspect);
-  height: 400px;
+  height: var(--c-height);
   scroll-snap-align: center;
 }
 
-/* --- Botones de Navegación Bubble --- */
+/* --- Navigation Buttons --- */
 .navBtn {
   position: absolute;
   z-index: 50;
@@ -178,14 +193,14 @@ const carouselStyles = computed(() => ({
   height: 100%;
   background: white;
   border-radius: var(--c-radius);
-  box-shadow: var(--bubble-shadow);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  border: 6px solid white;
+  border: var(--b-width) solid white;
   transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .slide:hover .bubbleFrame {
-  transform: scale(1.03) rotate(1.5deg);
+  transform: scale(1.03) rotate(var(--h-rot));
   border-color: var(--c-accent);
 }
 
@@ -205,7 +220,7 @@ const carouselStyles = computed(() => ({
   top: 25px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bubble-bg);
+  background: var(--pill-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   padding: 10px 20px;
@@ -244,8 +259,7 @@ const carouselStyles = computed(() => ({
 }
 
 @media (max-width: 768px) {
-  .slide { height: 320px; }
-  .bubbleFrame { border-radius: 40px; }
+  .slide { height: calc(var(--c-height) * 0.8); }
   .navBtn { display: none; }
 }
 </style>

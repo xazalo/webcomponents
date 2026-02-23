@@ -1,17 +1,22 @@
 <template>
   <button 
-    :class="[$style.switchContainer, { [$style.isActive]: modelValue }]"
-    @click="$emit('update:modelValue', !modelValue)"
+    v-bind="$attrs"
     type="button"
+    :class="[$style.switchRoot, { [$style.isActive]: modelValue }]"
+    :style="switchStyles"
+    @click="$emit('update:modelValue', !modelValue)"
   >
     <div :class="$style.cell">
-      <div :class="[$style.indicator, modelValue ? $style.bgSuccess : $style.bgOff]"></div>
-      <span :class="$style.label">{{ label }}</span>
+      <div :class="[$style.indicator, modelValue ? $style.bgActive : $style.bgOff]"></div>
+      <div :class="$style.stack">
+        <span :class="$style.label">{{ label }}</span>
+        <span v-if="subLabel" :class="$style.subLabel">{{ subLabel }}</span>
+      </div>
     </div>
 
     <div :class="[$style.cell, $style.toggleCell]">
       <span :class="$style.statusText">
-        {{ modelValue ? 'ON' : 'OFF' }}
+        {{ modelValue ? onText : offText }}
       </span>
       <div :class="$style.track">
         <div :class="$style.thumb"></div>
@@ -21,87 +26,138 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+defineOptions({ inheritAttrs: false });
+
+interface Props {
   modelValue: boolean;
   label: string;
-}>();
+  subLabel?: string;
+  onText?: string;
+  offText?: string;
+  // Tuning de estilo
+  activeColor?: string;
+  indicatorColor?: string;
+  borderRadius?: string;
+  width?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  subLabel: '',
+  onText: 'ON',
+  offText: 'OFF',
+  activeColor: '#4f46e5',
+  indicatorColor: '#10b981',
+  borderRadius: '20px',
+  width: 'fit-content'
+});
 
 defineEmits(['update:modelValue']);
+
+const switchStyles = computed(() => ({
+  '--s-accent': props.activeColor,
+  '--s-success': props.indicatorColor,
+  '--s-radius': props.borderRadius,
+  '--s-width': props.width
+}));
 </script>
 
 <style module>
-.switchContainer {
+.switchRoot {
   display: flex;
   gap: 8px;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 20px;
+  border-radius: var(--s-radius);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
-  width: fit-content;
+  width: var(--s-width);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1); /* Efecto de profundidad */
 }
 
-.switchContainer:hover {
-  background: rgba(255, 255, 255, 0.9);
+.switchRoot:hover {
+  background: rgba(255, 255, 255, 0.85);
   transform: translateY(-1px);
+}
+
+.switchRoot:active {
+  transform: translateY(1px);
+  border-bottom-width: 0px;
 }
 
 .cell {
   background: #ffffff;
   padding: 8px 14px;
-  border-radius: 14px;
+  border-radius: calc(var(--s-radius) - 6px);
   display: flex;
   align-items: center;
   gap: 12px;
   border: 1px solid rgba(0, 0, 0, 0.03);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
 }
 
 .label {
   font-size: 0.75rem;
-  font-weight: 700;
-  color: #4b5563;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  color: #1f2937;
+  letter-spacing: 0.01em;
+}
+
+.subLabel {
+  font-size: 0.6rem;
+  color: #9ca3af;
+  font-weight: 600;
 }
 
 .indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.bgSuccess { 
-  background: #10b981; 
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); 
+.bgActive { 
+  background: var(--s-success); 
+  box-shadow: 0 0 12px var(--s-success); 
+  transform: scale(1.2);
 }
 
 .bgOff { background: #d1d5db; }
 
-/* Estilos del Toggle */
+/* Celda Toggle */
 .toggleCell {
   background: #f9fafb;
-  min-width: 80px;
+  min-width: 90px;
   justify-content: space-between;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .statusText {
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 900;
   color: #9ca3af;
-  transition: color 0.3s ease;
+  letter-spacing: 0.05em;
+  transition: all 0.3s ease;
 }
 
 .track {
-  width: 32px;
+  width: 34px;
   height: 18px;
   background: #e5e7eb;
   border-radius: 10px;
   position: relative;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .thumb {
@@ -112,17 +168,20 @@ defineEmits(['update:modelValue']);
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  /* El secreto del rebote Apple-style */
+  transition: transform 0.4s cubic-bezier(0.68, -0.4, 0.265, 1.4);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
-/* Estado Activo */
+/* --- ESTADOS ACTIVOS --- */
+
 .isActive .toggleCell {
-  background: #4f46e5; /* Color acento */
+  background: var(--s-accent);
+  border-color: rgba(0,0,0,0.1);
 }
 
 .isActive .statusText {
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
 }
 
 .isActive .track {
@@ -130,6 +189,6 @@ defineEmits(['update:modelValue']);
 }
 
 .isActive .thumb {
-  transform: translateX(14px);
+  transform: translateX(16px);
 }
 </style>

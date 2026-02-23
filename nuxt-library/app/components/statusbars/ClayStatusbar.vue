@@ -1,161 +1,214 @@
 <template>
-  <div :class="$style.clayBar" :style="clayStyles">
-    <div :class="$style.clayCell">
+  <div v-bind="$attrs" :class="$style.clayRoot" :style="clayStyles">
+    <div :class="$style.cell">
       <div :class="$style.indicator">
         <div :class="$style.innerDot"></div>
       </div>
-      <span :class="$style.label">SYSTEM</span>
+      <span :class="$style.label">{{ label }}</span>
     </div>
 
-    <div :class="[$style.clayCell, $style.flexGrow]">
+    <div v-if="showProgress" :class="[$style.cell, $style.flexGrow]">
       <div :class="$style.track">
-        <div :class="$style.fill" :style="{ width: load + '%' }"></div>
+        <div :class="$style.fill" :style="{ width: progressValue + '%' }"></div>
       </div>
-      <span :class="$style.value">{{ load }}%</span>
+      <span :class="$style.value">{{ progressValue }}%</span>
     </div>
 
-    <div :class="$style.clayCell">
+    <div :class="$style.cell">
       <div :class="$style.signalGroup">
-        <div v-for="i in 3" :key="i" :class="$style.clayDot" :style="{ opacity: i < 3 ? 1 : 0.3 }"></div>
+        <div 
+          v-for="i in 3" 
+          :key="i" 
+          :class="$style.clayDot" 
+          :style="{ 
+            backgroundColor: i <= signalLevel ? 'var(--c-accent)' : '#cbd5e1',
+            opacity: i <= signalLevel ? 1 : 0.4
+          }"
+        ></div>
       </div>
     </div>
 
-    <div :class="[$style.clayCell, $style.clockCell]">
+    <div :class="[$style.cell, $style.clockCell]">
       <span :class="$style.timeText">{{ currentTime }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 
-const props = defineProps<{ color?: string }>();
-const load = ref(62);
+interface Props {
+  label?: string;
+  progressValue?: number;
+  signalLevel?: number;
+  color?: string;       /* Color de acento (ej: #38bdf8) */
+  // Clay Tuning
+  depth?: number;       /* Intensidad de la sombra interna (0-20) */
+  radius?: string;      /* Redondez de las celdas */
+  spread?: number;      /* Difusión de la sombra exterior */
+  showProgress?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  label: 'SYSTEM',
+  progressValue: 62,
+  signalLevel: 2,
+  color: '#38bdf8',
+  depth: 8,
+  radius: '22px',
+  spread: 16,
+  showProgress: true
+});
+
 const currentTime = ref('');
+let timer: any = null;
 
 const updateTime = () => {
   const now = new Date();
   currentTime.value = now.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false 
+    hour: '2-digit', minute: '2-digit', hour12: false 
   });
 };
 
 onMounted(() => {
   updateTime();
-  setInterval(updateTime, 1000);
+  timer = setInterval(updateTime, 1000);
 });
 
-const clayStyles = computed(() => ({
-  '--c-accent': props.color || '#38bdf8', // Azul cielo por defecto
-  '--c-bg': '#ffffff',
-  '--c-shadow-inner': 'rgba(0, 0, 0, 0.08)',
-  '--c-highlight': 'rgba(255, 255, 255, 1)'
-}));
+onUnmounted(() => clearInterval(timer));
+
+const clayStyles = computed(() => {
+  const d = props.depth;
+  const s = props.spread;
+  return {
+    '--c-accent': props.color,
+    '--c-radius': props.radius,
+    '--c-bg': '#ffffff',
+    // Sombra proyectada suave
+    '--c-outer-shadow': `0 ${s/2}px ${s}px rgba(0, 0, 0, 0.06)`,
+    // Sombras internas para el efecto "arcilla"
+    '--c-inner-dark': `inset -${d}px -${d}px ${d*2}px rgba(0, 0, 0, 0.08)`,
+    '--c-inner-light': `inset ${d}px ${d}px ${d*2}px rgba(255, 255, 255, 1)`,
+    // Sombra interna específica para el color de acento
+    '--c-accent-dark': `inset -${d}px -${d}px ${d*2}px rgba(0, 0, 0, 0.15)`,
+    '--c-accent-light': `inset ${d}px ${d}px ${d*2}px rgba(255, 255, 255, 0.4)`,
+  };
+});
 </script>
 
 <style module>
-.clayBar {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 12px 24px;
-  background: #f0f4f8; /* Color de fondo para que resalte el blanco */
-  border-radius: 30px;
-  width: fit-content;
-}
-
-.clayCell {
-  background: var(--c-bg);
-  padding: 10px 18px;
-  border-radius: 20px;
+.clayRoot {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 10px;
+  background: transparent;
+  width: fit-content;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.cell {
+  background: var(--c-bg);
+  padding: 10px 18px;
+  border-radius: var(--c-radius);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   
-  /* EL SECRETO DEL CLAYMORPHISM: Sombras combinadas */
+  /* El efecto Claymorphism */
   box-shadow: 
-    8px 8px 16px rgba(0, 0, 0, 0.05),              /* Sombra proyectada */
-    inset -6px -6px 12px var(--c-shadow-inner),    /* Profundidad inferior */
-    inset 6px 6px 12px var(--c-highlight);         /* Brillo superior */
+    var(--c-outer-shadow),
+    var(--c-inner-dark),
+    var(--c-inner-light);
     
-  transition: transform 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 20px rgba(0, 0, 0, 0.08),
+    var(--c-inner-dark),
+    var(--c-inner-light);
 }
 
 .flexGrow { flex-grow: 1; min-width: 180px; }
 
 .indicator {
-  width: 14px;
-  height: 14px;
+  width: 14px; height: 14px;
   background: #4ade80;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 2px 2px 4px rgba(255,255,255,0.5), inset -2px -2px 4px rgba(0,0,0,0.1);
+  box-shadow: 
+    inset -2px -2px 4px rgba(0,0,0,0.15), 
+    inset 2px 2px 4px rgba(255,255,255,0.5);
 }
 
 .innerDot {
-  width: 4px;
-  height: 4px;
+  width: 4px; height: 4px;
   background: white;
   border-radius: 50%;
-  filter: blur(1px);
+  filter: blur(0.5px);
 }
 
 .label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: #94a3b8;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .track {
   height: 12px;
   flex-grow: 1;
   background: #f1f5f9;
-  border-radius: 10px;
-  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);
+  border-radius: 20px;
+  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.08);
   overflow: hidden;
+  position: relative;
 }
 
 .fill {
   height: 100%;
   background: var(--c-accent);
-  border-radius: 10px;
-  transition: width 1s ease-in-out;
-  /* Brillo en la barra de carga */
-  box-shadow: inset 0 4px 4px rgba(255,255,255,0.3);
+  border-radius: 20px;
+  transition: width 1s cubic-bezier(0.65, 0, 0.35, 1);
+  box-shadow: inset 0 4px 6px rgba(255,255,255,0.3);
 }
 
 .value {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 900;
   color: var(--c-accent);
+  font-variant-numeric: tabular-nums;
 }
 
-.signalGroup { display: flex; gap: 4px; }
+.signalGroup { display: flex; gap: 6px; }
 .clayDot {
-  width: 8px;
-  height: 8px;
-  background: #cbd5e1;
+  width: 10px; height: 10px;
   border-radius: 50%;
-  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.1), 1px 1px 2px white;
+  box-shadow: 
+    inset -2px -2px 4px rgba(0,0,0,0.1), 
+    inset 2px 2px 3px rgba(255,255,255,0.8);
+  transition: all 0.3s ease;
 }
 
 .clockCell {
   background: var(--c-accent);
   color: white;
-  /* Sombra específica para el color de acento */
   box-shadow: 
-    8px 8px 16px rgba(0, 0, 0, 0.1),
-    inset -6px -6px 12px rgba(0, 0, 0, 0.2),
-    inset 6px 6px 12px rgba(255, 255, 255, 0.4);
+    var(--c-outer-shadow),
+    var(--c-accent-dark),
+    var(--c-accent-light);
 }
 
 .timeText {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 900;
+  letter-spacing: 0.5px;
 }
 </style>

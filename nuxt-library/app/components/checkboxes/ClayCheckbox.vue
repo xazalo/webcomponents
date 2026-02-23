@@ -1,13 +1,25 @@
 <template>
-  <label v-bind="$attrs" :class="$style.clayWrapper" :style="clayStyles">
+  <label 
+    v-bind="$attrs" 
+    :class="[
+      $style.clayWrapper, 
+      $style[size], 
+      { [$style.checked]: modelValue }
+    ]" 
+    :style="clayStyles"
+  >
     <div :class="$style.inputContainer">
       <input 
         type="checkbox" 
         :checked="modelValue" 
-        @change="$emit('update:modelValue', !modelValue)"
+        @change="$emit('update:modelValue', $event.target.checked)"
       />
       <div :class="$style.clayBox">
-        <Icon v-if="modelValue" name="lucide:check" :class="$style.checkIcon" />
+        <Transition name="clay-pop">
+          <svg v-if="modelValue" viewBox="0 0 24 24" :class="$style.checkIcon">
+            <path d="M20 6L9 17L4 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </Transition>
       </div>
     </div>
     <span v-if="label" :class="$style.label">{{ label }}</span>
@@ -18,15 +30,40 @@
 import { computed } from 'vue';
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: boolean;
   label?: string;
-  color?: string;
-}>();
+  // Colores
+  accentColor?: string;   /* Color de la arcilla cuando se activa */
+  baseColor?: string;     /* Fondo del componente (wrapper) */
+  textColor?: string;     /* Color de la etiqueta */
+  // Estética
+  size?: 'sm' | 'md' | 'lg';
+  borderRadius?: string;
+  depth?: number;         /* Intensidad del relieve (0 a 1) */
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: false,
+  accentColor: '#f472b6',
+  baseColor: '#f0f4f8',
+  textColor: '#64748b',
+  size: 'md',
+  borderRadius: '25px',
+  depth: 0.5
+});
+
+defineEmits(['update:modelValue']);
 
 const clayStyles = computed(() => ({
-  '--c-accent': props.color || '#f472b6', // Rosa pastel por defecto
-  '--c-bg': '#f0f4f8'
+  '--c-accent': props.accentColor,
+  '--c-bg': props.baseColor,
+  '--c-text': props.textColor,
+  '--c-radius': props.borderRadius,
+  // Sombras dinámicas basadas en profundidad
+  '--c-inner-light': `inset 0 ${4 * props.depth}px ${6 * props.depth}px rgba(255, 255, 255, 0.8)`,
+  '--c-inner-dark': `inset 0 -${6 * props.depth}px ${8 * props.depth}px rgba(0, 0, 0, ${0.1 * props.depth})`,
+  '--c-outer-shadow': `0 ${10 * props.depth}px ${20 * props.depth}px -5px rgba(0, 0, 0, 0.08)`,
 }));
 </script>
 
@@ -38,21 +75,16 @@ const clayStyles = computed(() => ({
   cursor: pointer;
   padding: 0.6rem 1.2rem;
   background: var(--c-bg);
-  border-radius: 25px; /* Radio muy amplio */
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: var(--c-radius);
   user-select: none;
-  
-  /* Sombra exterior suave para flotación */
-  box-shadow: 
-    0 8px 16px rgba(0, 0, 0, 0.05),
-    inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: var(--c-outer-shadow), var(--c-inner-light);
 }
 
 .clayWrapper:hover {
-  transform: translateY(-2px);
-  box-shadow: 
-    0 12px 20px rgba(0, 0, 0, 0.08),
-    inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  transform: translateY(-3px);
+  filter: brightness(1.02);
+  box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1), var(--c-inner-light);
 }
 
 .inputContainer {
@@ -61,53 +93,64 @@ const clayStyles = computed(() => ({
 }
 
 .inputContainer input {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .clayBox {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.5em;
+  height: 1.5em;
   background: white;
-  border-radius: 10px;
+  border-radius: calc(var(--c-radius) * 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  
-  /* El secreto del Claymorphism: Sombras internas */
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.05),
     inset 0 2px 4px rgba(255, 255, 255, 1),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.05);
+    inset 0 -3px 6px rgba(0, 0, 0, 0.05),
+    0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 /* Estado Marcado */
-.inputContainer input:checked ~ .clayBox {
+.checked .clayBox {
   background: var(--c-accent);
-  transform: scale(1.1) rotate(3deg);
+  transform: scale(1.15) rotate(3deg);
   box-shadow: 
-    0 6px 12px rgba(0, 0, 0, 0.1),
-    inset 0 4px 6px rgba(255, 255, 255, 0.4),
-    inset 0 -4px 8px rgba(0, 0, 0, 0.15);
+    var(--c-inner-light),
+    var(--c-inner-dark),
+    0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
 .checkIcon {
   color: white;
-  width: 1rem;
-  height: 1rem;
-  stroke-width: 4px;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+  width: 65%;
+  height: 65%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
 }
 
 .label {
-  font-size: 0.95rem;
   font-weight: 700;
-  color: #64748b;
+  color: var(--c-text);
   letter-spacing: -0.01em;
 }
 
-/* Efecto al presionar */
+/* Tamaños */
+.sm { font-size: 0.8rem; padding: 0.4rem 0.9rem; }
+.md { font-size: 1rem; }
+.lg { font-size: 1.2rem; padding: 0.8rem 1.6rem; }
+
+/* Animación de entrada */
+:global(.clay-pop-enter-active) {
+  animation: clay-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes clay-pop {
+  0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
 .clayWrapper:active {
-  transform: scale(0.95);
+  transform: scale(0.92) translateY(2px);
 }
 </style>

@@ -1,8 +1,10 @@
 <template>
   <button 
-    :class="[$style.switchContainer, { [$style.isActive]: modelValue }]"
-    @click="$emit('update:modelValue', !modelValue)"
+    v-bind="$attrs"
     type="button"
+    :class="[$style.glassRoot, { [$style.isActive]: modelValue }]"
+    :style="glassStyles"
+    @click="$emit('update:modelValue', !modelValue)"
   >
     <div :class="$style.cell">
       <div :class="[$style.glassIndicator, modelValue ? $style.bgActive : $style.bgOff]"></div>
@@ -13,62 +15,92 @@
       <div :class="$style.track">
         <div :class="$style.thumb"></div>
       </div>
-      <span :class="$style.statusText">{{ modelValue ? 'ON' : 'OFF' }}</span>
+      <span :class="$style.statusText">{{ modelValue ? onText : offText }}</span>
     </div>
   </button>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+defineOptions({ inheritAttrs: false });
+
+interface Props {
   modelValue: boolean;
   label: string;
-}>();
+  onText?: string;
+  offText?: string;
+  // Glass Tuning
+  accentColor?: string;   /* Color cuando está ON (ej: Esmeralda) */
+  blurAmount?: string;    /* Intensidad del desenfoque (ej: 12px) */
+  glassOpacity?: number;  /* Opacidad del fondo (0 a 1) */
+  tintColor?: string;     /* Tinte del cristal (blanco o negro) */
+  borderRadius?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  onText: 'ON',
+  offText: 'OFF',
+  accentColor: '#34d399',
+  blurAmount: '12px',
+  glassOpacity: 0.1,
+  tintColor: '255, 255, 255', // Formato RGB
+  borderRadius: '16px'
+});
 
 defineEmits(['update:modelValue']);
+
+const glassStyles = computed(() => ({
+  '--g-accent': props.accentColor,
+  '--g-blur': props.blurAmount,
+  '--g-bg-opacity': props.glassOpacity,
+  '--g-tint': props.tintColor,
+  '--g-radius': props.borderRadius,
+}));
 </script>
 
 <style module>
-.switchContainer {
+.glassRoot {
   display: flex;
   gap: 8px;
   padding: 8px;
-  /* El fondo base del cristal */
-  background: rgba(255, 255, 255, 0.1);
-  /* El efecto de desenfoque es vital */
-  backdrop-filter: blur(12px) saturate(180%);
-  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(var(--g-tint), var(--g-bg-opacity));
   
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  /* Efectos de cristal esenciales */
+  backdrop-filter: blur(var(--g-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(180%);
+  
+  border-radius: var(--g-radius);
+  border: 1px solid rgba(var(--g-tint), 0.2);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   width: fit-content;
   outline: none;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
-.switchContainer:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+.glassRoot:hover {
+  background: rgba(var(--g-tint), calc(var(--g-bg-opacity) + 0.05));
+  border-color: rgba(var(--g-tint), 0.4);
   transform: translateY(-1px);
 }
 
 .cell {
-  /* Celdas con un blanco muy sutil para destacar del contenedor */
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--g-tint), 0.05);
   padding: 8px 14px;
-  border-radius: 12px;
+  border-radius: calc(var(--g-radius) - 4px);
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(var(--g-tint), 0.1);
+  transition: all 0.3s ease;
 }
 
 .label {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--g-tint), 0.9);
   letter-spacing: 0.02em;
 }
 
@@ -80,24 +112,28 @@ defineEmits(['update:modelValue']);
 }
 
 .bgActive { 
-  background: #34d399; 
-  box-shadow: 0 0 12px #34d399;
+  background: var(--g-accent); 
+  box-shadow: 0 0 15px var(--g-accent);
 }
-.bgOff { background: rgba(255, 255, 255, 0.3); }
+
+.bgOff { 
+  background: rgba(var(--g-tint), 0.3); 
+}
 
 .toggleCell {
-  min-width: 85px;
+  min-width: 90px;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--g-tint), 0.08);
 }
 
 .track {
-  width: 34px;
+  width: 36px;
   height: 18px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 20px;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(var(--g-tint), 0.1);
+  transition: all 0.3s ease;
 }
 
 .thumb {
@@ -108,33 +144,36 @@ defineEmits(['update:modelValue']);
   position: absolute;
   top: 1px;
   left: 2px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .statusText {
   font-size: 0.7rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.6);
+  font-weight: 800;
+  color: rgba(var(--g-tint), 0.5);
+  transition: all 0.3s ease;
 }
 
-/* Estado Activo */
+/* --- ESTADO ACTIVO --- */
+
 .isActive {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(var(--g-tint), calc(var(--g-bg-opacity) + 0.1));
+  border-color: rgba(var(--g-tint), 0.5);
 }
 
 .isActive .thumb {
-  transform: translateX(14px);
+  transform: translateX(16px);
   background: #ffffff;
 }
 
 .isActive .statusText {
-  color: #ffffff;
+  color: rgba(var(--g-tint), 1);
+  text-shadow: 0 0 8px rgba(var(--g-tint), 0.5);
 }
 
 .isActive .track {
-  background: rgba(52, 211, 153, 0.3);
-  border-color: rgba(52, 211, 153, 0.5);
+  background: color-mix(in srgb, var(--g-accent), transparent 70%);
+  border-color: var(--g-accent);
 }
 </style>

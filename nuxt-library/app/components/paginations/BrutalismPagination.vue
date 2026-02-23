@@ -1,17 +1,23 @@
 <template>
-  <div :class="$style.neoPagination">
+  <div 
+    v-bind="$attrs"
+    :class="[$style.neoPagination, $style[size]]" 
+    :style="neoStyles"
+  >
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navCell]" 
       @click="prevPage" 
       :disabled="modelValue === 1"
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="4">
-        <path d="m15 18-6-6 6-6"/>
-      </svg>
+      <slot name="prev-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="4">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </slot>
     </button>
 
-    <div :class="[$style.cell, $style.statusCell]">
-      <span :class="$style.label">PAG_NUM</span>
+    <div v-if="showStatus" :class="[$style.cell, $style.statusCell]">
+      <span :class="$style.label">{{ statusLabel }}</span>
       <div :class="$style.counter">
         <span :class="$style.current">{{ modelValue }}</span>
         <span :class="$style.separator">/</span>
@@ -19,7 +25,7 @@
       </div>
     </div>
 
-    <div :class="[$style.cell, $style.quickJumpCell]">
+    <div v-if="showNumbers" :class="[$style.cell, $style.quickJumpCell]">
       <button 
         v-for="page in visiblePages" 
         :key="page"
@@ -31,24 +37,47 @@
     </div>
 
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navCell]" 
       @click="nextPage" 
       :disabled="modelValue === totalPages"
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="4">
-        <path d="m9 18 6-6-6-6"/>
-      </svg>
+      <slot name="next-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="4">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </slot>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: number;
   totalPages: number;
-}>();
+  statusLabel?: string;
+  // Personalización NeoBrutalista
+  mainColor?: string;     /* Fondo del contenedor (ej: #FACC15) */
+  accentColor?: string;   /* Color de selección (ej: #22d3ee) */
+  borderWidth?: string;   /* Grosor de línea (ej: 3px) */
+  shadowSize?: string;    /* Tamaño de la sombra dura (ej: 4px) */
+  size?: 'sm' | 'md' | 'lg';
+  showStatus?: boolean;
+  showNumbers?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  statusLabel: 'PAG_NUM',
+  mainColor: '#FACC15',
+  accentColor: '#22d3ee',
+  borderWidth: '3px',
+  shadowSize: '5px',
+  size: 'md',
+  showStatus: true,
+  showNumbers: true
+});
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -67,118 +96,123 @@ const visiblePages = computed(() => {
   for (let i = start; i <= end; i++) pages.push(i);
   return pages;
 });
+
+const neoStyles = computed(() => ({
+  '--neo-main': props.mainColor,
+  '--neo-accent': props.accentColor,
+  '--neo-border-w': props.borderWidth,
+  '--neo-shadow-s': props.shadowSize,
+}));
 </script>
 
 <style module>
-:root {
-  --neo-border: 3px solid #000;
-  --neo-shadow: 4px 4px 0px #000;
-  --color-main: #FACC15; /* Amarillo */
-  --color-accent: #22d3ee; /* Cian */
-}
-
 .neoPagination {
   display: flex;
   gap: 12px;
   padding: 12px;
-  background: var(--color-main);
-  border: var(--neo-border);
-  box-shadow: var(--neo-shadow);
+  background: var(--neo-main);
+  border: var(--neo-border-w) solid #000;
+  box-shadow: var(--neo-shadow-s) var(--neo-shadow-s) 0px #000;
   width: fit-content;
+  font-family: 'Arial Black', sans-serif;
 }
 
 .cell {
   background: #fff;
   padding: 6px 14px;
-  border: var(--neo-border);
+  border: var(--neo-border-w) solid #000;
   display: flex;
   align-items: center;
-  transition: transform 0.1s;
+  transition: all 0.1s;
 }
 
+/* --- Botones de Navegación --- */
 .navCell {
   cursor: pointer;
   justify-content: center;
-  padding: 6px 10px;
+  padding: 8px 12px;
 }
 
 .navCell:hover:not(:disabled) {
-  background: var(--color-accent);
-  transform: translate(-2px, -2px);
-  box-shadow: 2px 2px 0px #000;
+  background: var(--neo-accent);
+  transform: translate(-3px, -3px);
+  box-shadow: 3px 3px 0px #000;
 }
 
 .navCell:active:not(:disabled) {
-  transform: translate(2px, 2px);
+  transform: translate(1px, 1px);
   box-shadow: none;
 }
 
 .navCell:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #e5e7eb;
+  background: #dfdfdf;
 }
 
+/* --- Celda de Status --- */
 .statusCell {
   flex-direction: column;
   min-width: 90px;
-  background: #fff;
+  justify-content: center;
 }
 
 .label {
-  font-family: 'Arial Black', sans-serif;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 900;
   color: #000;
+  letter-spacing: 1px;
 }
 
 .counter {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 4px;
-  font-family: 'Courier New', Courier, monospace;
-  font-weight: 900;
 }
 
 .current {
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   color: #000;
 }
 
 .separator, .total {
   font-size: 0.9rem;
-  color: #666;
+  color: #000;
+  opacity: 0.6;
 }
 
+/* --- Quick Jump --- */
 .quickJumpCell {
   gap: 8px;
-  padding: 6px;
-  background: #fff;
+  padding: 8px;
 }
 
 .pageBtn {
-  width: 34px;
-  height: 34px;
-  border: 2px solid #000;
+  width: 38px;
+  height: 38px;
+  border: var(--neo-border-w) solid #000;
   background: #fff;
-  font-family: 'Arial Black', sans-serif;
   font-weight: 900;
   cursor: pointer;
   transition: all 0.1s;
 }
 
 .pageBtn:hover {
-  background: #eee;
-  transform: scale(1.1);
+  background: #000;
+  color: #fff;
 }
 
 .activePage {
-  background: var(--color-accent) !important;
-  box-shadow: 2px 2px 0px #000;
-  transform: translate(-2px, -2px);
+  background: var(--neo-accent) !important;
+  box-shadow: 3px 3px 0px #000;
+  transform: translate(-3px, -3px);
 }
 
+/* --- Tamaños --- */
+.sm { transform: scale(0.8); }
+.lg { transform: scale(1.1); }
+
 @media (max-width: 500px) {
-  .quickJumpCell { display: none; }
+  .statusCell { display: none; }
 }
 </style>

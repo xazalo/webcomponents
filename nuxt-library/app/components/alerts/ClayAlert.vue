@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.clayAlert, $style[type]]">
+  <div :class="[$style.clayAlert, $style[type]]" :style="dynamicStyles">
     <div :class="$style.iconBox">
       <slot name="icon">!</slot>
     </div>
@@ -21,28 +21,45 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+interface Props {
   title: string;
   message: string;
   type: "info" | "warning" | "error" | "success";
   actionText: string;
   buttonText: string;
-}>();
+  // Dynamic color overrides
+  clayColor?: string;
+  textColor?: string;
+  btnBg?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  textColor: '#444b6e',
+  btnBg: '#444b6e'
+});
 
 defineEmits(["close", "action"]);
+
+const dynamicStyles = computed(() => {
+  // Default Pastel Clay Palette
+  const typeColors = {
+    info: '#85e3ff',
+    warning: '#ffde91',
+    error: '#ff9aa2',
+    success: '#b2f2bb'
+  };
+
+  return {
+    '--current-bg': props.clayColor || typeColors[props.type],
+    '--clay-text': props.textColor,
+    '--btn-main-bg': props.btnBg,
+  };
+});
 </script>
 
 <style module>
-:root {
-  --clay-white: #ffffff;
-  --clay-text: #444b6e;
-  /* Paleta Pastel Clay */
-  --c-info: #85e3ff;
-  --c-warning: #ffde91;
-  --c-error: #ff9aa2;
-  --c-success: #b2f2bb;
-}
-
 .clayAlert {
   display: flex;
   flex-direction: column;
@@ -52,7 +69,7 @@ defineEmits(["close", "action"]);
   border-radius: 35px;
   background: var(--current-bg);
 
-  /* El efecto Claymorphism real: sombras externas suaves + internas dobles */
+  /* The Claymorphism Effect */
   box-shadow:
     20px 20px 40px rgba(0, 0, 0, 0.08),
     inset -10px -10px 20px rgba(0, 0, 0, 0.1),
@@ -60,6 +77,7 @@ defineEmits(["close", "action"]);
 
   font-family: "Quicksand", sans-serif;
   position: relative;
+  color: var(--clay-text);
 }
 
 .iconBox {
@@ -73,7 +91,8 @@ defineEmits(["close", "action"]);
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--clay-text);
-  /* Sub-elemento también con efecto clay */
+  
+  /* Clay effect on sub-element */
   box-shadow:
     8px 8px 16px rgba(0, 0, 0, 0.05),
     inset -4px -4px 8px rgba(0, 0, 0, 0.05),
@@ -91,7 +110,9 @@ defineEmits(["close", "action"]);
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: rgba(68, 75, 110, 0.8);
+  /* Using opacity on the text color variable for hierarchy */
+  color: var(--clay-text);
+  opacity: 0.8;
   line-height: 1.5;
 }
 
@@ -105,12 +126,12 @@ defineEmits(["close", "action"]);
   border: none;
   padding: 14px;
   border-radius: 20px;
-  background: var(--clay-text);
-  color: white;
+  background: var(--btn-main-bg);
+  color: #ffffff;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .mainBtn:hover {
@@ -127,25 +148,12 @@ defineEmits(["close", "action"]);
   color: var(--clay-text);
   font-weight: 700;
   cursor: pointer;
-  /* Efecto hundido para el botón secundario */
+  /* Sunken "inset" shadow for the secondary button */
   box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05);
+  transition: background 0.2s ease;
 }
 
 .secondaryBtn:hover {
   background: rgba(255, 255, 255, 0.6);
-}
-
-/* Variantes de color */
-.info {
-  --current-bg: var(--c-info);
-}
-.warning {
-  --current-bg: var(--c-warning);
-}
-.error {
-  --current-bg: var(--c-error);
-}
-.success {
-  --current-bg: var(--c-success);
 }
 </style>

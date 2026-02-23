@@ -8,7 +8,7 @@
     <div :class="$style.grid">
       <section :class="$style.card">
         <span :class="$style.tag">Bento Style</span>
-        <BentoBreadcrumb :items="navItems" />
+        <BentoBreadcrumb :items="navItems" borderRadius="1rem" color="#F54927"/>
       </section>
 
       <section :class="[$style.card, $style.darkCard]">

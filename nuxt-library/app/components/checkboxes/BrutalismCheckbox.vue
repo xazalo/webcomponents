@@ -1,13 +1,23 @@
 <template>
-  <label v-bind="$attrs" :class="$style.brutalWrapper" :style="brutalStyles">
+  <label 
+    v-bind="$attrs" 
+    :class="[
+      $style.brutalWrapper, 
+      $style[size], 
+      { [$style.checked]: modelValue }
+    ]" 
+    :style="brutalStyles"
+  >
     <div :class="$style.inputContainer">
       <input 
         type="checkbox" 
         :checked="modelValue" 
-        @change="$emit('update:modelValue', !modelValue)"
+        @change="$emit('update:modelValue', $event.target.checked)"
       />
       <div :class="$style.brutalBox">
-        <Icon v-if="modelValue" name="lucide:check" :class="$style.checkIcon" />
+        <svg v-if="modelValue" viewBox="0 0 24 24" :class="$style.checkIcon">
+          <path d="M20 6L9 17L4 12" fill="none" stroke="currentColor" :stroke-width="iconStroke" stroke-linecap="square" stroke-linejoin="square"/>
+        </svg>
       </div>
     </div>
     <span v-if="label" :class="$style.label">{{ label }}</span>
@@ -18,14 +28,45 @@
 import { computed } from 'vue';
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: boolean;
   label?: string;
-  color?: string;
-}>();
+  // Colores
+  accentColor?: string;   /* Fondo del box cuando está marcado */
+  baseColor?: string;     /* Fondo del botón entero */
+  textColor?: string;     /* Color de letra y box desmarcado */
+  borderColor?: string;   /* Color de trazos y sombras */
+  // Estructura
+  size?: 'sm' | 'md' | 'lg';
+  borderWidth?: string;   /* Grosor de las líneas */
+  shadowSize?: string;    /* Distancia de la sombra sólida */
+  borderRadius?: string;  /* Curvatura (recomiendo 0 o poca) */
+  iconStroke?: number;    /* Grosor del check */
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: false,
+  accentColor: '#00ff41',
+  baseColor: '#ffffff',
+  textColor: '#000000',
+  borderColor: '#000000',
+  size: 'md',
+  borderWidth: '3px',
+  shadowSize: '4px',
+  borderRadius: '0px',
+  iconStroke: 4
+});
+
+defineEmits(['update:modelValue']);
 
 const brutalStyles = computed(() => ({
-  '--b-accent': props.color || '#00ff41', // Verde "Matrix" o similar funciona genial
+  '--brutal-accent': props.accentColor,
+  '--brutal-bg': props.baseColor,
+  '--brutal-text': props.textColor,
+  '--brutal-border': props.borderColor,
+  '--brutal-bw': props.borderWidth,
+  '--brutal-sw': props.shadowSize,
+  '--brutal-radius': props.borderRadius,
 }));
 </script>
 
@@ -36,23 +77,22 @@ const brutalStyles = computed(() => ({
   gap: 0.75rem;
   cursor: pointer;
   padding: 0.6rem 1rem;
-  background: #ffffff;
-  border: 3px solid #000000;
-  /* El neo-brutalismo usa o 0 o un radio muy pequeño */
-  border-radius: 4px; 
-  box-shadow: 4px 4px 0px 0px #000000;
-  transition: all 0.1s ease;
+  background: var(--brutal-bg);
+  border: var(--brutal-bw) solid var(--brutal-border);
+  border-radius: var(--brutal-radius);
+  box-shadow: var(--brutal-sw) var(--brutal-sw) 0px 0px var(--brutal-border);
+  transition: all 0.1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
   user-select: none;
 }
 
 .brutalWrapper:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px 0px #000000;
+  transform: translate(calc(var(--brutal-sw) * -0.5), calc(var(--brutal-sw) * -0.5));
+  box-shadow: calc(var(--brutal-sw) * 1.5) calc(var(--brutal-sw) * 1.5) 0px 0px var(--brutal-border);
 }
 
 .brutalWrapper:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0px 0px 0px 0px #000000;
+  transform: translate(var(--brutal-sw), var(--brutal-sw));
+  box-shadow: 0px 0px 0px 0px var(--brutal-border);
 }
 
 .inputContainer {
@@ -61,15 +101,17 @@ const brutalStyles = computed(() => ({
 }
 
 .inputContainer input {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .brutalBox {
-  width: 1.5rem;
-  height: 1.5rem;
-  background: #ffffff;
-  border: 2px solid #000000;
-  border-radius: 2px;
+  width: 1.5em;
+  height: 1.5em;
+  background: var(--brutal-bg);
+  border: calc(var(--brutal-bw) * 0.7) solid var(--brutal-border);
+  border-radius: calc(var(--brutal-radius) * 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,26 +119,35 @@ const brutalStyles = computed(() => ({
 }
 
 /* Estado Marcado */
-.inputContainer input:checked ~ .brutalBox {
-  background: var(--b-accent);
+.checked .brutalBox {
+  background: var(--brutal-accent);
+}
+
+.checked {
+  /* Opcional: El wrapper puede cambiar sutilmente al estar activo */
+  background: #fdfdfd; 
 }
 
 .checkIcon {
-  color: #000000; /* Texto negro sobre fondo de color para máximo contraste */
-  width: 1.1rem;
-  height: 1.1rem;
-  stroke-width: 4px;
+  color: var(--brutal-border);
+  width: 80%;
+  height: 80%;
 }
 
 .label {
   font-size: 1rem;
   font-weight: 900;
   text-transform: uppercase;
-  color: #000000;
+  color: var(--brutal-text);
+  letter-spacing: 0.02em;
 }
 
-/* Efecto visual cuando está marcado el envoltorio */
-.brutalWrapper:has(input:checked) {
-  background: #f0f0f0;
+/* Tamaños */
+.sm { font-size: 0.75rem; padding: 0.4rem 0.7rem; --brutal-sw: 2px; }
+.md { font-size: 1rem; padding: 0.6rem 1rem; }
+.lg { font-size: 1.25rem; padding: 0.8rem 1.4rem; --brutal-sw: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .brutalWrapper { transition: none; }
 }
 </style>

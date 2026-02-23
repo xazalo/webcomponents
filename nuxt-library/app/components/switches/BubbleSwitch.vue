@@ -1,11 +1,15 @@
 <template>
   <button 
-    :class="[$style.switchContainer, { [$style.isActive]: modelValue }]"
-    @click="$emit('update:modelValue', !modelValue)"
+    v-bind="$attrs"
     type="button"
+    :class="[$style.bubbleRoot, { [$style.isActive]: modelValue }]"
+    :style="bubbleStyles"
+    @click="$emit('update:modelValue', !modelValue)"
   >
     <div :class="$style.cell">
-      <div :class="[$style.bubbleIndicator, modelValue ? $style.bgActive : $style.bgOff]"></div>
+      <div :class="[$style.bubbleIndicator, modelValue ? $style.bgActive : $style.bgOff]">
+        <div :class="$style.miniGlare"></div>
+      </div>
       <span :class="$style.label">{{ label }}</span>
     </div>
 
@@ -16,79 +20,113 @@
         </div>
       </div>
       <span :class="$style.statusText">
-        {{ modelValue ? 'YAY!' : 'NOPE' }}
+        {{ modelValue ? onText : offText }}
       </span>
     </div>
   </button>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+defineOptions({ inheritAttrs: false });
+
+interface Props {
   modelValue: boolean;
   label: string;
-}>();
+  onText?: string;
+  offText?: string;
+  // Bubble Tuning
+  colorIdle?: string;    /* Color cuando está OFF (Rosa/Gris) */
+  colorActive?: string;  /* Color cuando está ON (Cyan/Verde) */
+  accentText?: string;   /* Color del texto */
+  radius?: string;       /* Nivel de redondez */
+  bounce?: number;       /* Escala de rebote al click (0.9 a 1.1) */
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  onText: 'YAY!',
+  offText: 'NOPE',
+  colorIdle: '#ff8dfb',
+  colorActive: '#70e0ff',
+  accentText: '#ff70e0',
+  radius: '40px',
+  bounce: 0.95
+});
 
 defineEmits(['update:modelValue']);
+
+const bubbleStyles = computed(() => ({
+  '--b-main': props.colorIdle,
+  '--b-active': props.colorActive,
+  '--b-text': props.accentText,
+  '--b-radius': props.radius,
+  '--b-bounce': props.bounce,
+}));
 </script>
 
 <style module>
-:root {
-  --bubble-radius: 40px;
-  --color-main: #ff8dfb; /* Rosa chicle */
-  --color-active: #70e0ff; /* Azul cielo */
-  --soft-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-  --inner-glare: inset 2px 4px 8px rgba(255, 255, 255, 0.8), 
-                 inset -2px -4px 8px rgba(0, 0, 0, 0.05);
-}
-
-.switchContainer {
+.bubbleRoot {
   display: flex;
   gap: 10px;
-  padding: 10px;
-  background: #fdf2f8;
-  border-radius: var(--bubble-radius);
+  padding: 8px;
+  background: color-mix(in srgb, var(--b-main) 10%, #fff);
+  border-radius: var(--b-radius);
   border: none;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: var(--soft-shadow);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
   width: fit-content;
   outline: none;
 }
 
-.switchContainer:hover {
-  transform: scale(1.03);
-  background: #ffffff;
+.bubbleRoot:hover {
+  transform: scale(1.02);
+  background: #fff;
 }
 
-.switchContainer:active {
-  transform: scale(0.96);
+.bubbleRoot:active {
+  transform: scale(var(--b-bounce));
 }
 
 .cell {
-  background: #ffffff;
-  padding: 10px 18px;
-  border-radius: var(--bubble-radius);
+  background: #fff;
+  padding: 8px 16px;
+  border-radius: var(--b-radius);
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: var(--inner-glare);
+  box-shadow: inset 2px 4px 8px rgba(255, 255, 255, 0.8), 
+              inset -2px -4px 8px rgba(0, 0, 0, 0.03);
 }
 
 .label {
-  font-family: 'Rounded Mplus 1c', 'Comic Sans MS', sans-serif;
+  font-family: 'Rounded Mplus 1c', sans-serif;
   font-size: 0.8rem;
   font-weight: 800;
-  color: #ff70e0;
+  color: var(--b-text);
+  transition: color 0.3s ease;
 }
 
+/* Indicador de estado con volumen */
 .bubbleIndicator {
   width: 14px;
   height: 14px;
   border-radius: 50%;
+  position: relative;
+  transition: all 0.4s ease;
   box-shadow: inset -2px -2px 4px rgba(0,0,0,0.1);
 }
 
-.bgActive { background: var(--color-active); }
+.miniGlare {
+  position: absolute;
+  top: 2px; left: 3px;
+  width: 4px; height: 3px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 50%;
+}
+
+.bgActive { background: var(--b-active); box-shadow: 0 0 10px var(--b-active); }
 .bgOff { background: #e2e8f0; }
 
 .toggleCell {
@@ -97,59 +135,59 @@ defineEmits(['update:modelValue']);
 }
 
 .track {
-  width: 44px;
+  width: 46px;
   height: 24px;
-  background: #eeeef2;
+  background: #f1f5f9;
   border-radius: 20px;
   position: relative;
-  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);
+  box-shadow: inset 2px 3px 6px rgba(0,0,0,0.06);
 }
 
 .thumb {
   width: 18px;
   height: 18px;
-  background: var(--color-main);
+  background: var(--b-main);
   border-radius: 50%;
   position: absolute;
   top: 3px;
   left: 3px;
-  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  box-shadow: 2px 4px 6px rgba(255, 141, 251, 0.4);
+  transition: transform 0.5s cubic-bezier(0.68, -0.6, 0.3, 1.6);
+  box-shadow: 0 4px 8px color-mix(in srgb, var(--b-main), transparent 50%);
 }
 
 .glare {
-  width: 6px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.6);
+  width: 6px; height: 4px;
+  background: rgba(255, 255, 255, 0.5);
   border-radius: 50%;
   position: absolute;
-  top: 3px;
-  left: 4px;
+  top: 3px; left: 4px;
 }
 
 .statusText {
   font-size: 0.7rem;
   font-weight: 900;
   color: #94a3b8;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
-/* Cambios en estado Activo */
+/* --- ESTADO ACTIVO --- */
+
 .isActive {
-  background: #eefbff;
+  background: color-mix(in srgb, var(--b-active) 10%, #fff);
 }
 
 .isActive .label {
-  color: #38bdf8;
+  color: color-mix(in srgb, var(--b-active) 80%, #000);
 }
 
 .isActive .thumb {
-  transform: translateX(20px);
-  background: var(--color-active);
-  box-shadow: 2px 4px 6px rgba(112, 224, 255, 0.4);
+  transform: translateX(22px);
+  background: var(--b-active);
+  box-shadow: 0 4px 8px color-mix(in srgb, var(--b-active), transparent 50%);
 }
 
 .isActive .statusText {
-  color: #0ea5e9;
+  color: var(--b-active);
+  filter: brightness(0.8);
 }
 </style>

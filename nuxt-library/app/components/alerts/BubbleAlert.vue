@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.bubbleAlert, $style[type]]">
+  <div :class="[$style.bubbleAlert, $style[type]]" :style="dynamicStyles">
     <div :class="$style.mainGlare"></div>
 
     <div :class="$style.header">
@@ -25,25 +25,45 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+interface Props {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'error' | 'success';
   actionText: string;
-  buttonText: string
-}>();
+  buttonText: string;
+  // Prop-based customization
+  bubbleColor?: string;
+  textColor?: string;
+  actionBtnColor?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  textColor: '#2d3436',
+  actionBtnColor: '#2d3436'
+});
 
 defineEmits(['close', 'action']);
+
+const dynamicStyles = computed(() => {
+  // Default bubble colors if no specific bubbleColor is provided
+  const typeColors = {
+    info: '#70d6ff',
+    warning: '#ffd670',
+    error: '#ff70a6',
+    success: '#8dffbe'
+  };
+
+  return {
+    '--current-color': props.bubbleColor || typeColors[props.type],
+    '--text-color': props.textColor,
+    '--action-btn-bg': props.actionBtnColor,
+  };
+});
 </script>
 
 <style module>
-:root {
-  --bubble-bg-info: #70d6ff;
-  --bubble-bg-warning: #ffd670;
-  --bubble-bg-error: #ff70a6;
-  --bubble-bg-success: #8dffbe;
-}
-
 .bubbleAlert {
   display: flex;
   flex-direction: column;
@@ -54,7 +74,7 @@ defineEmits(['close', 'action']);
   position: relative;
   overflow: hidden;
   
-  /* Gradiente base + Sombra de "inflado" */
+  /* Background and Glossy Shadows */
   background: var(--current-color);
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.1),
@@ -104,7 +124,7 @@ defineEmits(['close', 'action']);
   margin: 0;
   font-size: 1.4rem;
   font-weight: 800;
-  color: #2d3436;
+  color: var(--text-color);
 }
 
 .body {
@@ -112,13 +132,14 @@ defineEmits(['close', 'action']);
   padding: 15px;
   border-radius: 25px;
   backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .message {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #2d3436;
+  color: var(--text-color);
   line-height: 1.4;
 }
 
@@ -129,7 +150,7 @@ defineEmits(['close', 'action']);
 
 .actionBtn {
   flex: 2;
-  background: #2d3436;
+  background: var(--action-btn-bg);
   color: white;
   border: none;
   padding: 12px;
@@ -140,28 +161,23 @@ defineEmits(['close', 'action']);
 }
 
 .actionBtn:hover {
-  background: #000;
+  filter: brightness(1.2);
   transform: translateY(-2px);
 }
 
 .closeBtn {
   flex: 1;
   background: rgba(255, 255, 255, 0.5);
-  color: #2d3436;
+  color: var(--text-color);
   border: none;
   padding: 12px;
   border-radius: 20px;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 .closeBtn:hover {
-  background: white;
+  background: rgba(255, 255, 255, 0.8);
 }
-
-/* Variantes de color */
-.info { --current-color: var(--bubble-bg-info); }
-.warning { --current-color: var(--bubble-bg-warning); }
-.error { --current-color: var(--bubble-bg-error); }
-.success { --current-color: var(--bubble-bg-success); }
 </style>

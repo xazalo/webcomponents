@@ -1,12 +1,17 @@
 <template>
-  <div :class="$style.neoContainer">
+  <div :class="$style.neoContainer" :style="neoTheme">
     <header :class="$style.headerBlock">
       <div :class="$style.titleBox">
-        <h1 :class="$style.mainTitle">DATA_CORE</h1>
-        <div :class="$style.badge">v.3.0_LIVE</div>
+        <h1 :class="$style.mainTitle">{{ title }}</h1>
+        <div :class="$style.badge">{{ version }}</div>
       </div>
       <div :class="$style.searchBox">
-        <input type="text" placeholder="BUSCAR_REGISTROS..." :class="$style.neoInput" />
+        <input 
+          type="text" 
+          :placeholder="searchPlaceholder" 
+          :class="$style.neoInput" 
+          @input="$emit('search', $event.target.value)"
+        />
         <button :class="$style.searchBtn">GO!</button>
       </div>
     </header>
@@ -15,80 +20,119 @@
       <aside :class="$style.filterBlock">
         <h3 :class="$style.subTitle">FILTROS_</h3>
         <div :class="$style.filterList">
-          <label v-for="tag in ['ADMIN', 'USER', 'BOT', 'GUEST']" :key="tag" :class="$style.checkLabel">
-            <input type="checkbox" :class="$style.neoCheck" />
+          <label v-for="tag in tags" :key="tag" :class="$style.checkLabel">
+            <input type="checkbox" :class="$style.neoCheck" @change="$emit('filter', tag)" />
             <span :class="$style.checkText">{{ tag }}</span>
           </label>
         </div>
-        <button :class="$style.resetBtn">WIPE_ALL</button>
+        <button :class="$style.resetBtn" @click="$emit('reset')">WIPE_ALL</button>
       </aside>
 
       <main :class="$style.tableBlock">
-        <table :class="$style.neoTable">
-          <thead>
-            <tr>
-              <th>UUID</th>
-              <th>IDENTIDAD</th>
-              <th>ESTADO</th>
-              <th>ACCION</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="i in 5" :key="i">
-              <td :class="$style.mono">0x{{ i }}F4_99</td>
-              <td :class="$style.userName">NEO_USER_{{ i }}</td>
-              <td>
-                <span :class="[$style.status, i % 2 === 0 ? $style.active : $style.error]">
-                  {{ i % 2 === 0 ? 'READY' : 'FAIL' }}
-                </span>
-              </td>
-              <td>
-                <button :class="$style.miniBtn">DEL</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div :class="$style.scrollArea">
+          <table :class="$style.neoTable">
+            <thead>
+              <tr>
+                <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, i) in data" :key="i">
+                <td v-for="col in columns" :key="col.key">
+                  <slot :name="`col-${col.key}`" :item="item" :index="i">
+                    <span :class="[col.key === 'id' ? $style.mono : '', col.key === 'user' ? $style.userName : '']">
+                      {{ item[col.key] }}
+                    </span>
+                  </slot>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </main>
     </div>
 
     <footer :class="$style.footerBlock">
       <div :class="$style.pagination">
-        <button :class="$style.pageBtn">⇽ BACK</button>
-        <div :class="$style.pageNumber">PAGE_01</div>
-        <button :class="$style.pageBtn">NEXT ⇾</button>
+        <button :class="$style.pageBtn" @click="$emit('prev')">⇽ BACK</button>
+        <div :class="$style.pageNumber">PAGE_{{ currentPage }}</div>
+        <button :class="$style.pageBtn" @click="$emit('next')">NEXT ⇾</button>
       </div>
     </footer>
   </div>
 </template>
 
-<style module>
-:root {
-  --neo-yellow: #f4fd05;
-  --neo-pink: #ff00f5;
-  --neo-blue: #32feff;
-  --neo-green: #00ff41;
-  --neo-black: #000000;
-  --neo-white: #ffffff;
-  --neo-shadow: 10px 10px 0px var(--neo-black);
+<script setup lang="ts">
+import { computed } from 'vue';
+
+interface Props {
+  title?: string;
+  version?: string;
+  searchPlaceholder?: string;
+  tags?: string[];
+  columns?: { label: string; key: string }[];
+  data?: any[];
+  currentPage?: number | string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  successColor?: string;
+  borderWidth?: string;
+  shadowDepth?: string;
 }
 
+const props = withDefaults(defineProps<Props>(), {
+  title: 'DATA_CORE',
+  version: 'v.3.0_LIVE',
+  searchPlaceholder: 'BUSCAR...',
+  tags: () => ['ADMIN', 'USER', 'BOT'],
+  columns: () => [
+    { label: 'UUID', key: 'id' },
+    { label: 'IDENTIDAD', key: 'user' },
+    { label: 'ESTADO', key: 'status' }
+  ],
+  data: () => [],
+  currentPage: 1,
+  primaryColor: '#f4fd05',
+  secondaryColor: '#ff00f5',
+  accentColor: '#32feff',
+  successColor: '#00ff41',
+  borderWidth: '4px',
+  shadowDepth: '8px'
+});
+
+const neoTheme = computed(() => ({
+  '--neo-primary': props.primaryColor,
+  '--neo-secondary': props.secondaryColor,
+  '--neo-accent': props.accentColor,
+  '--neo-success': props.successColor,
+  '--neo-border-w': props.borderWidth,
+  '--neo-shadow-d': props.shadowDepth,
+}));
+</script>
+
+<style module>
+/* --- BASE --- */
 .neoContainer {
+  --neo-black: #000;
+  --neo-white: #fff;
   background: var(--neo-white);
-  padding: 30px;
-  font-family: 'Arial Black', sans-serif;
+  padding: clamp(10px, 4vw, 30px);
+  font-family: 'Arial Black', 'Inter', sans-serif;
   color: var(--neo-black);
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  max-width: 1000px;
+  gap: clamp(15px, 4vw, 25px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Header Estilo Poster */
+/* --- HEADER --- */
 .headerBlock {
-  background: var(--neo-yellow);
-  border: 5px solid var(--neo-black);
-  padding: 25px;
-  box-shadow: var(--neo-shadow);
+  background: var(--neo-primary);
+  border: var(--neo-border-w) solid var(--neo-black);
+  padding: clamp(15px, 4vw, 25px);
+  box-shadow: var(--neo-shadow-d) var(--neo-shadow-d) 0px var(--neo-black);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -96,135 +140,155 @@
   gap: 20px;
 }
 
-.mainTitle { margin: 0; font-size: 3.5rem; line-height: 0.8; letter-spacing: -2px; }
+.titleBox { flex: 1 1 200px; }
+.mainTitle { 
+  margin: 0; 
+  font-size: clamp(1.8rem, 8vw, 3.5rem); 
+  line-height: 0.9; 
+  letter-spacing: -2px; 
+  text-transform: uppercase;
+}
 
 .badge {
   background: var(--neo-black);
   color: var(--neo-white);
-  padding: 5px 10px;
+  padding: 4px 10px;
   display: inline-block;
-  margin-top: 10px;
-  font-size: 0.8rem;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  font-weight: normal;
 }
 
-.searchBox { display: flex; gap: 10px; flex-grow: 1; max-width: 400px; }
+.searchBox { 
+  display: flex; 
+  gap: 0; /* Unimos input y botón estilo bloque */
+  flex: 1 1 300px; 
+  min-width: 0;
+}
 
 .neoInput {
-  flex-grow: 1;
-  border: 4px solid var(--neo-black);
+  flex: 1;
+  border: var(--neo-border-w) solid var(--neo-black);
   padding: 12px;
   font-weight: 900;
-  font-size: 1rem;
+  font-family: 'Courier New', monospace;
+  min-width: 0;
+  outline: none;
 }
 
 .searchBtn {
-  background: var(--neo-pink);
-  border: 4px solid var(--neo-black);
+  background: var(--neo-secondary);
+  border: var(--neo-border-w) solid var(--neo-black);
+  border-left: none; /* Evita doble borde en la unión */
   padding: 0 20px;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 4px 4px 0px var(--neo-black);
 }
 
-.searchBtn:active { transform: translate(2px, 2px); box-shadow: none; }
+.searchBtn:hover { background: var(--neo-accent); }
 
-/* Grid Layout */
+/* --- GRID --- */
 .mainGrid {
   display: grid;
-  grid-template-columns: 250px 1fr;
-  gap: 25px;
+  grid-template-columns: 260px 1fr;
+  gap: clamp(15px, 4vw, 25px);
 }
 
-/* Sidebar Filtros */
 .filterBlock {
-  background: var(--neo-blue);
-  border: 5px solid var(--neo-black);
+  background: var(--neo-accent);
+  border: var(--neo-border-w) solid var(--neo-black);
   padding: 20px;
-  box-shadow: var(--neo-shadow);
+  box-shadow: var(--neo-shadow-d) var(--neo-shadow-d) 0px var(--neo-black);
+  height: fit-content;
 }
 
-.filterList { display: flex; flex-direction: column; gap: 12px; margin: 20px 0; }
+.subTitle { font-size: 1rem; margin-bottom: 15px; text-decoration: underline; }
+.filterList { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
 
-.checkLabel { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-
+.checkLabel { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; }
 .neoCheck {
-  width: 25px;
-  height: 25px;
+  width: 24px; height: 24px;
   border: 3px solid var(--neo-black);
   appearance: none;
   background: white;
   cursor: pointer;
+  flex-shrink: 0;
+}
+.neoCheck:checked { background: var(--neo-black); position: relative; }
+.neoCheck:checked::after {
+  content: '✕'; color: var(--neo-white); position: absolute;
+  left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 14px;
 }
 
-.neoCheck:checked { background: var(--neo-black); position: relative; }
-.neoCheck:checked::after { content: '✕'; color: var(--neo-white); position: absolute; left: 4px; top: -2px; }
+.resetBtn {
+  width: 100%; background: var(--neo-black); color: var(--neo-white);
+  border: none; padding: 10px; font-weight: 900; cursor: pointer;
+  text-transform: uppercase; font-size: 0.8rem;
+}
 
-/* Tabla Masiva */
+/* --- TABLE --- */
 .tableBlock {
   background: var(--neo-white);
-  border: 5px solid var(--neo-black);
-  box-shadow: var(--neo-shadow);
-  overflow-x: auto;
+  border: var(--neo-border-w) solid var(--neo-black);
+  box-shadow: var(--neo-shadow-d) var(--neo-shadow-d) 0px var(--neo-black);
+  min-width: 0;
 }
 
-.neoTable { width: 100%; border-collapse: collapse; }
+.scrollArea { overflow-x: auto; width: 100%; }
 
+.neoTable { width: 100%; border-collapse: collapse; min-width: 500px; }
 .neoTable th {
-  background: var(--neo-black);
-  color: var(--neo-white);
-  padding: 15px;
-  text-align: left;
+  background: var(--neo-black); color: var(--neo-white);
+  padding: 15px; text-align: left; font-size: 0.8rem;
 }
 
 .neoTable td {
   padding: 15px;
-  border-bottom: 4px solid var(--neo-black);
-  font-weight: 800;
+  border-bottom: var(--neo-border-w) solid var(--neo-black);
+  font-weight: 800; font-size: 0.9rem;
 }
 
-.userName { color: var(--neo-pink); text-transform: uppercase; }
-.mono { font-family: monospace; font-size: 0.9rem; }
+.userName { color: var(--neo-secondary); text-transform: uppercase; }
+.mono { font-family: monospace; opacity: 0.7; }
 
-.status {
-  padding: 5px 10px;
-  border: 3px solid var(--neo-black);
-}
-.active { background: var(--neo-green); }
-.error { background: var(--neo-pink); color: white; }
-
-.miniBtn {
-  background: var(--neo-white);
-  border: 3px solid var(--neo-black);
-  padding: 5px 10px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.miniBtn:hover { background: var(--neo-black); color: var(--neo-white); }
-
-/* Footer */
+/* --- FOOTER --- */
 .footerBlock {
   background: var(--neo-black);
-  padding: 20px;
-  border: 5px solid var(--neo-black);
-  box-shadow: var(--neo-shadow);
+  padding: 15px;
+  border: var(--neo-border-w) solid var(--neo-black);
+  box-shadow: var(--neo-shadow-d) var(--neo-shadow-d) 0px var(--neo-black);
 }
 
-.pagination { display: flex; justify-content: space-between; align-items: center; }
+.pagination { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  flex-wrap: wrap;
+  gap: 15px;
+}
 
 .pageBtn {
-  background: var(--neo-yellow);
+  background: var(--neo-primary);
   border: 3px solid var(--neo-black);
-  padding: 10px 20px;
+  padding: 8px 20px;
   font-weight: 900;
   cursor: pointer;
   box-shadow: 4px 4px 0px var(--neo-white);
 }
 
-.pageNumber { color: var(--neo-white); font-size: 1.2rem; }
+.pageBtn:active { transform: translate(2px, 2px); box-shadow: none; }
+.pageNumber { color: var(--neo-white); font-size: 1rem; letter-spacing: 1px; }
 
-@media (max-width: 800px) {
+/* --- BREAKPOINTS --- */
+@media (max-width: 900px) {
   .mainGrid { grid-template-columns: 1fr; }
-  .mainTitle { font-size: 2.5rem; }
+  .headerBlock { flex-direction: column; align-items: stretch; }
+  .searchBox { max-width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .neoContainer { padding: 10px; }
+  .mainTitle { line-height: 1; }
+  .neoTable td { padding: 10px; font-size: 0.8rem; }
 }
 </style>

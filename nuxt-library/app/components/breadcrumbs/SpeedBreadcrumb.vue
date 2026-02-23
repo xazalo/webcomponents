@@ -1,11 +1,23 @@
 <template>
-  <nav v-bind="$attrs" :class="$style.speedNav" :style="navStyles">
+  <nav 
+    v-bind="$attrs" 
+    :class="[$style.speedNav, $style[orientation]]" 
+    :style="navStyles"
+  >
     <ol :class="$style.list">
       <li v-for="(item, index) in items" :key="index" :class="$style.item">
-        <NuxtLink :to="item.to" :class="$style.speedLink">
-          <span v-if="item.icon" :class="$style.icon">{{ item.icon }}</span>
-          <span :class="$style.label">{{ item.label }}</span>
-          <div :class="$style.shimmer"></div>
+        <NuxtLink 
+          :to="item.to" 
+          :class="[$style.speedLink, $style[size]]"
+          :active-class="$style.activeLink"
+        >
+          <div :class="$style.content">
+            <span v-if="item.icon" :class="$style.icon">{{ item.icon }}</span>
+            <span :class="$style.label">{{ item.label }}</span>
+          </div>
+          
+          <div :class="$style.shimmer" />
+          <div :class="$style.trail" />
         </NuxtLink>
       </li>
     </ol>
@@ -22,98 +34,137 @@ interface NavItem {
   icon?: string;
 }
 
-const props = defineProps<{
+interface Props {
   items: NavItem[];
-  color?: string; // Color de rastro/acento
-}>();
+  // Colores
+  accentColor?: string;   /* Color de la estela y estado activo */
+  baseBg?: string;        /* Fondo del botón */
+  textColor?: string;     /* Color del texto */
+  // Estética
+  size?: 'sm' | 'md' | 'lg';
+  orientation?: 'horizontal' | 'vertical';
+  skewAngle?: number;     /* Grados de inclinación (0 a 25) */
+  showShimmer?: boolean;  /* Destello al pasar el ratón */
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  accentColor: '#0066ff',
+  baseBg: '#0a0a0a',
+  textColor: '#ffffff',
+  size: 'md',
+  orientation: 'horizontal',
+  skewAngle: 15,
+  showShimmer: true
+});
 
 const navStyles = computed(() => ({
-  '--s-accent': props.color || '#0066ff',
-  '--s-skew': '-15deg'
+  '--s-accent': props.accentColor,
+  '--s-bg': props.baseBg,
+  '--s-text': props.textColor,
+  '--s-skew': `-${props.skewAngle}deg`,
+  '--s-skew-inv': `${props.skewAngle}deg`,
 }));
 </script>
 
 <style module>
 .speedNav {
   display: inline-block;
-  padding: 1rem;
+  padding: 0.5rem;
 }
+
+.vertical { display: block; width: max-content; }
 
 .list {
   display: flex;
-  gap: 1.2rem;
+  gap: 1rem;
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.item {
-  display: flex;
-  align-items: center;
-}
+.vertical .list { flex-direction: column; gap: 0.5rem; }
 
 .speedLink {
   position: relative;
-  padding: 0.6rem 1.8rem;
-  background: #0a0a0a;
-  color: #ffffff;
+  background: var(--s-bg);
+  color: var(--s-text);
   text-decoration: none;
   font-weight: 900;
-  font-style: italic; /* Las itálicas aumentan la sensación de velocidad */
-  font-size: 0.85rem;
   text-transform: uppercase;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   overflow: hidden;
-  
-  /* Inclinación aerodinámica */
   transform: skewX(var(--s-skew));
   border-left: 4px solid var(--s-accent);
-  border-right: 0px solid transparent;
-  
-  transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow: 6px 0 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  cursor: pointer;
 }
+
+/* Contenedor interno para enderezar el texto e icono */
+.content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  transform: skewX(var(--s-skew-inv));
+  z-index: 2;
+  font-style: italic;
+}
+
+/* Tamaños */
+.sm { padding: 0.4rem 1.2rem; font-size: 0.7rem; border-left-width: 3px; }
+.md { padding: 0.7rem 1.8rem; font-size: 0.85rem; }
+.lg { padding: 1rem 2.5rem; font-size: 1.1rem; border-left-width: 6px; }
 
 .speedLink:hover {
-  background: #151515;
+  transform: skewX(var(--s-skew)) translateX(8px);
+  background: var(--s-bg);
   color: var(--s-accent);
-  transform: skewX(var(--s-skew)) translateX(8px); /* Se desplaza hacia adelante */
-  border-right: 8px solid var(--s-accent);
-  box-shadow: -10px 0 20px -5px rgba(var(--s-accent), 0.3);
+  box-shadow: -10px 0 20px rgba(0, 0, 0, 0.2);
 }
 
-.speedLink:hover .shimmer {
-  animation: speedFlash 0.5s forwards;
+.activeLink {
+  background: var(--s-accent) !important;
+  color: #ffffff !important;
+  border-left-color: #ffffff !important;
+  transform: skewX(var(--s-skew)) translateX(4px);
+  box-shadow: 0 0 20px rgba(var(--s-accent), 0.4);
 }
 
-.icon {
-  font-size: 1.1rem;
-  /* Corregimos la inclinación para el icono para que sea legible */
-  transform: skewX(calc(var(--s-skew) * -1));
+/* Efecto de Estela (Trail) */
+.trail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 100%;
+  background: var(--s-accent);
+  opacity: 0.3;
+  transition: width 0.3s ease;
+  z-index: 1;
 }
 
-.label {
-  /* Corregimos la inclinación para el texto */
-  transform: skewX(calc(var(--s-skew) * -1));
-  letter-spacing: 0.05em;
+.speedLink:hover .trail {
+  width: 100%;
 }
 
-/* Efecto de destello al acelerar */
+/* Shimmer (Aceleración) */
 .shimmer {
   position: absolute;
   top: 0;
   left: -100%;
-  width: 40%;
+  width: 50%;
   height: 100%;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.3),
     transparent
   );
-  transform: skewX(var(--s-skew));
+  z-index: 3;
+}
+
+.speedLink:hover .shimmer {
+  animation: speedFlash 0.6s ease-out forwards;
 }
 
 @keyframes speedFlash {
@@ -121,15 +172,12 @@ const navStyles = computed(() => ({
   100% { left: 150%; }
 }
 
-/* Link activo: Estela de color persistente */
-:global(.router-link-active) .speedLink {
-  background: var(--s-accent);
-  color: white;
-  border-left-color: white;
-  box-shadow: 0 0 15px var(--s-accent);
-}
+.icon { font-size: 1.2em; }
+.label { letter-spacing: 0.05em; white-space: nowrap; }
 
-:global(.router-link-active) .label {
-  text-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+@media (max-width: 640px) {
+  .speedNav { width: 100%; overflow-x: auto; }
+  .speedLink { transform: skewX(-8deg); }
+  .content { transform: skewX(8deg); }
 }
 </style>

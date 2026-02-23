@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.bentoAlert, $style[type]]">
+  <div :class="[$style.bentoAlert, $style[type]]" :style="dynamicStyles">
     <div :class="[$style.cell, $style.mainCell]">
       <div :class="$style.iconWrapper">
         <slot name="icon">
@@ -7,7 +7,7 @@
         </slot>
       </div>
       <div :class="$style.headerText">
-        <span :class="$style.label">{{ label }}</span>
+        <span v-if="label" :class="$style.label">{{ label }}</span>
         <h3 :class="$style.title">{{ title }}</h3>
       </div>
     </div>
@@ -28,30 +28,48 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+interface Props {
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type?: 'info' | 'warning' | 'error' | 'success';
   actionText: string;
-  label?: string
-}>();
+  label?: string;
+  // Dynamic color props
+  accentColor?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  type: 'info',
+  accentColor: '#A2D2FF', // Default fallback
+  backgroundColor: '#ffffff',
+  borderColor: '#000000'
+});
 
 defineEmits(['close', 'action']);
+
+// Map the "type" to default colors if accentColor isn't explicitly changed,
+// or just use the prop directly for full control.
+const dynamicStyles = computed(() => {
+  const typeColors = {
+    info: '#A2D2FF',
+    warning: '#FFD6A5',
+    error: '#FFADAD',
+    success: '#CAFFBF'
+  };
+
+  return {
+    '--current-accent': props.accentColor || typeColors[props.type],
+    '--bento-bg': props.backgroundColor,
+    '--bento-border': props.borderColor,
+  };
+});
 </script>
 
 <style module>
-:root {
-  --bento-black: #000000;
-  --bento-white: #ffffff;
-  --bento-shadow: 6px 6px 0px #000000;
-  
-  /* Colores por tipo */
-  --color-info: #A2D2FF;
-  --color-warning: #FFD6A5;
-  --color-error: #FFADAD;
-  --color-success: #CAFFBF;
-}
-
 .bentoAlert {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -59,60 +77,58 @@ defineEmits(['close', 'action']);
   gap: 12px;
   max-width: 500px;
   padding: 12px;
-  background: var(--bento-white);
+  background: var(--bento-bg);
   font-family: 'Arial Black', sans-serif;
-  border: 4px solid var(--bento-black);
+  border: 4px solid var(--bento-border);
   box-shadow: 12px 12px 0px rgba(0,0,0,0.1);
 }
 
 .cell {
-  background: var(--bento-white);
-  border: 3px solid var(--bento-black);
+  background: var(--bento-bg);
+  border: 3px solid var(--bento-border);
   padding: 15px;
-  box-shadow: var(--bento-shadow);
+  box-shadow: 6px 6px 0px var(--bento-border);
   display: flex;
   flex-direction: column;
   transition: transform 0.1s ease;
 }
 
-/* Celda Principal (Título e Icono) */
 .mainCell {
   grid-column: span 3;
   flex-direction: row;
   align-items: center;
   gap: 15px;
-  background: var(--current-color, var(--color-info));
+  /* Uses the dynamic accent color */
+  background: var(--current-accent);
 }
 
 .iconWrapper {
   width: 40px;
   height: 40px;
-  background: var(--bento-black);
-  color: var(--bento-white);
+  background: var(--bento-border);
+  color: var(--bento-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  font-size: 1.2rem;
 }
 
 .label {
   font-size: 0.6rem;
-  color: var(--bento-black);
+  color: var(--bento-border);
   opacity: 0.7;
+  display: block;
 }
 
 .title {
   margin: 0;
   font-size: 1.2rem;
   text-transform: uppercase;
-  line-height: 1;
+  color: var(--bento-border);
 }
 
-/* Celda de Contenido */
 .contentCell {
   grid-column: span 4;
-  background: var(--bento-white);
 }
 
 .description {
@@ -120,56 +136,43 @@ defineEmits(['close', 'action']);
   font-family: 'Arial', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
-  line-height: 1.4;
-  color: #333;
+  color: var(--bento-border);
 }
 
-/* Celda de Acción */
 .actionCell {
   grid-column: span 3;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  background: var(--bento-black);
-  color: var(--bento-white);
+  background: var(--bento-border);
+  color: var(--bento-bg);
 }
 
 .actionCell:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 8px 8px 0px var(--current-color);
+  /* The shadow on hover now uses the dynamic accent color */
+  box-shadow: 8px 8px 0px var(--current-accent);
 }
 
-.actionLabel {
-  font-size: 0.8rem;
-  letter-spacing: 1px;
-}
-
-/* Celda de Cierre */
 .closeCell {
   grid-column: span 1;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  font-size: 1.2rem;
+  background: var(--bento-bg);
+  color: var(--bento-border);
+  border: 3px solid var(--bento-border);
 }
 
 .closeCell:hover {
-  background: var(--bento-black);
-  color: var(--bento-white);
+  background: var(--bento-border);
+  color: var(--bento-bg);
 }
-
-/* Variantes de color */
-.info { --current-color: var(--color-info); }
-.warning { --current-color: var(--color-warning); }
-.error { --current-color: var(--color-error); }
-.success { --current-color: var(--color-success); }
 
 @media (max-width: 400px) {
   .bentoAlert { grid-template-columns: repeat(2, 1fr); }
   .mainCell { grid-column: span 2; }
   .contentCell { grid-column: span 2; }
-  .actionCell { grid-column: span 1; }
-  .closeCell { grid-column: span 1; }
 }
 </style>

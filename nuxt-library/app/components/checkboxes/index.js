@@ -3,7 +3,7 @@ import CyberCheckbox from "./CyberCheckbox.vue";
 import BentoCheckbox from "./BentoCheckbox";
 import BrutalismCheckbox from "./BrutalismCheckbox";
 import ClayCheckbox from "./ClayCheckbox";
-import neuCheckbox from "./neuCheckbox";
+import NeuCheckbox from "./NeuCheckbox";
 import SpeedCheckbox from "./SpeedCheckbox";
 import GlassCheckbox from "./GlassCheckbox"
 
@@ -13,7 +13,7 @@ export {
   BentoCheckbox,
   BrutalismCheckbox,
   ClayCheckbox,
-  neuCheckbox,
+  NeuCheckbox,
   SpeedCheckbox,
   GlassCheckbox
 };

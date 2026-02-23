@@ -1,17 +1,19 @@
 <template>
   <button 
-    :class="[$style.switchContainer, { [$style.isActive]: modelValue }]"
-    @click="$emit('update:modelValue', !modelValue)"
+    v-bind="$attrs"
     type="button"
+    :class="[$style.brutalRoot, { [$style.isActive]: modelValue }]"
+    :style="brutalStyles"
+    @click="$emit('update:modelValue', !modelValue)"
   >
     <div :class="$style.cell">
-      <div :class="[$style.indicator, modelValue ? $style.bgSuccess : $style.bgOff]"></div>
+      <div :class="[$style.indicator, modelValue ? $style.bgOn : $style.bgOff]"></div>
       <span :class="$style.label">{{ label }}</span>
     </div>
 
     <div :class="[$style.cell, $style.toggleCell]">
       <span :class="$style.statusText">
-        {{ modelValue ? 'ACTIVE' : 'IDLE' }}
+        {{ modelValue ? onText : offText }}
       </span>
       <div :class="$style.track">
         <div :class="$style.thumb"></div>
@@ -21,119 +23,141 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+defineOptions({ inheritAttrs: false });
+
+interface Props {
   modelValue: boolean;
   label: string;
-}>();
+  onText?: string;
+  offText?: string;
+  // Brutal Tuning
+  bgIdle?: string;      /* Color de fondo desactivado (ej: Amarillo) */
+  bgActive?: string;    /* Color de fondo activado (ej: Cyan) */
+  accentColor?: string; /* Color del indicador "ON" (ej: Lima) */
+  errorColor?: string;  /* Color del indicador "OFF" (ej: Rojo) */
+  borderWidth?: string; /* Grosor del borde */
+  shadowSize?: string;  /* Tamaño de la sombra dura */
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  onText: 'ACTIVE',
+  offText: 'IDLE',
+  bgIdle: '#FACC15',
+  bgActive: '#22d3ee',
+  accentColor: '#A3E635',
+  errorColor: '#ff5c5c',
+  borderWidth: '3px',
+  shadowSize: '4px'
+});
 
 defineEmits(['update:modelValue']);
+
+const brutalStyles = computed(() => ({
+  '--b-bg-idle': props.bgIdle,
+  '--b-bg-active': props.bgActive,
+  '--b-accent': props.accentColor,
+  '--b-error': props.errorColor,
+  '--b-border': props.borderWidth,
+  '--b-shadow': props.shadowSize,
+}));
 </script>
 
 <style module>
-/* Paleta Neobrutalista: Bordes negros gruesos y sombras sin blur */
-:root {
-  --border-width: 3px;
-  --shadow-offset: 4px;
-  --color-black: #000000;
-  --color-white: #ffffff;
-  --color-accent: #A3E635; /* Lima Neobrutal */
-  --color-bg: #FACC15;     /* Amarillo Neobrutal */
-}
-
-.switchContainer {
+.brutalRoot {
   display: flex;
   gap: 12px;
   padding: 10px;
-  background: var(--color-bg);
-  border: var(--border-width) solid var(--color-black);
-  box-shadow: var(--shadow-offset) var(--shadow-offset) 0px var(--color-black);
+  background: var(--b-bg-idle);
+  border: var(--b-border) solid #000;
+  box-shadow: var(--b-shadow) var(--b-shadow) 0px #000;
   cursor: pointer;
-  transition: all 0.1s active;
+  transition: all 0.1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
   outline: none;
   width: fit-content;
+  user-select: none;
 }
 
-.switchContainer:hover {
+/* Efecto de elevación Neobrutalista */
+.brutalRoot:hover {
   transform: translate(-2px, -2px);
-  box-shadow: calc(var(--shadow-offset) + 2px) calc(var(--shadow-offset) + 2px) 0px var(--color-black);
+  box-shadow: calc(var(--b-shadow) + 2px) calc(var(--b-shadow) + 2px) 0px #000;
 }
 
-.switchContainer:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0px 0px 0px var(--color-black);
+.brutalRoot:active {
+  transform: translate(var(--b-shadow), var(--b-shadow));
+  box-shadow: 0px 0px 0px #000;
 }
 
 .cell {
-  background: var(--color-white);
+  background: #fff;
   padding: 8px 16px;
-  border: var(--border-width) solid var(--color-black);
+  border: var(--b-border) solid #000;
   display: flex;
   align-items: center;
   gap: 12px;
-  /* El bento neobrutal no suele llevar border-radius o es muy pequeño */
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .label {
-  font-family: 'Arial Black', sans-serif;
-  font-size: 0.8rem;
+  font-family: 'Arial Black', 'Impact', sans-serif;
+  font-size: 0.85rem;
   font-weight: 900;
-  color: var(--color-black);
+  color: #000;
   text-transform: uppercase;
+  letter-spacing: -0.5px;
 }
 
 .indicator {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--color-black);
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+  transition: background 0.1s ease;
 }
 
-.bgSuccess { background: var(--color-accent); }
-.bgOff { background: #ff5c5c; } /* Rojo neobrutal */
+.bgOn { background: var(--b-accent); }
+.bgOff { background: var(--b-error); }
 
 .toggleCell {
-  background: var(--color-white);
-  min-width: 100px;
+  min-width: 110px;
   justify-content: space-between;
 }
 
 .statusText {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 900;
-  color: var(--color-black);
+  color: #000;
 }
 
 .track {
-  width: 40px;
-  height: 22px;
-  background: var(--color-black);
+  width: 44px;
+  height: 24px;
+  background: #000;
   position: relative;
   border-radius: 0px;
 }
 
 .thumb {
-  width: 16px;
-  height: 16px;
-  background: var(--color-white);
-  border: 2px solid var(--color-black);
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: 2px solid #000;
   position: absolute;
   top: 1px;
   left: 2px;
-  transition: transform 0.15s ease-out;
+  transition: transform 0.15s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* Variación Activa */
+/* --- ESTADO ACTIVO --- */
+
 .isActive {
-  background: #22d3ee; /* Cyan en lugar de amarillo al activar */
+  background: var(--b-bg-active);
 }
 
 .isActive .thumb {
-  transform: translateX(18px);
-  background: var(--color-accent);
-}
-
-.isActive .toggleCell {
-  background: var(--color-white);
+  transform: translateX(20px);
+  background: var(--b-accent);
 }
 </style>

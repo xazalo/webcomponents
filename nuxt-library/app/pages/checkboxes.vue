@@ -50,8 +50,8 @@
       <section :class="[$style.card, $style.neuBg]">
         <span :class="$style.tag">Neumorphism // Soft Inset</span>
         <div :class="$style.stack">
-          <neuCheckbox v-model="states.neu1" label="Soft Toggle" />
-          <neuCheckbox v-model="states.neu2" label="Inner Shadow" />
+          <NeuCheckbox v-model="states.neu1" label="Soft Toggle" />
+          <NeuCheckbox v-model="states.neu2" label="Inner Shadow" />
         </div>
       </section>
 
@@ -65,8 +65,8 @@
       <section :class="[$style.card, $style.darkCard]">
         <span :class="$style.tag">Speed // Racing HUD</span>
         <div :class="$style.stack">
-          <SpeedCheckbox v-model="states.speed1" label="NITRO_ENABLED" color="#fcee0a" />
-          <SpeedCheckbox v-model="states.speed2" label="DRS_ACTIVE" color="#ffffff" />
+          <SpeedCheckbox v-model="states.speed1" label="NITRO_ENABLED" />
+          <SpeedCheckbox v-model="states.speed2" label="DRS_ACTIVE" />
         </div>
       </section>
     </div>
@@ -82,7 +82,7 @@ import {
   ClayCheckbox, 
   GlassCheckbox, 
   CyberCheckbox, 
-  neuCheckbox, 
+  NeuCheckbox, 
   SpeedCheckbox 
 } from "../components/checkboxes"
 

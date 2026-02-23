@@ -1,13 +1,13 @@
 <template>
   <div :class="$style.wrapper" :style="carouselStyles">
-    <button @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Anterior">
+    <button v-if="showControls" @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Anterior">
       <div :class="$style.btnGlow" />
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
     </button>
     
-    <button @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
+    <button v-if="showControls" @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
       <div :class="$style.btnGlow" />
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6 6-6"/></svg>
     </button>
 
     <div 
@@ -25,15 +25,15 @@
           :class="$style.slide"
           :style="{ '--slide-aspect': item.aspectRatio || defaultAspectRatio }"
         >
-          <div :class="$style.cyberFrame">
+          <div :class="$style.cyberFrame" @click="$emit('select', item)">
             <div :class="$style.cornerTop" />
             <div :class="$style.cornerBottom" />
-            <div :class="$style.scanline" />
+            <div v-if="showScanline" :class="$style.scanline" />
 
             <MediaRender :url="item.url" :alt="item.alt" :class="$style.media" />
             
             <div v-if="item.label" :class="$style.cyberLabel">
-              <span :class="$style.glitchText" :data-text="item.label">
+              <span :class="$style.glitchText">
                 {{ item.label }}
               </span>
               <div :class="$style.statusDot" />
@@ -54,25 +54,32 @@ interface CarouselItem {
   alt?: string;
   label?: string;
   aspectRatio?: string;
-  width?: string;
 }
 
-const props = withDefaults(defineProps<{
+interface Props {
   items: CarouselItem[];
   defaultAspectRatio?: string;
-  defaultSlideWidth?: string;
   gap?: string;
-  color?: string;
-  radius?: string;
-  showScrollbar?: boolean;
-}>(), {
+  accentColor?: string; // Neon color
+  bgColor?: string;     // Deep background
+  cardHeight?: string;
+  scanSpeed?: string;   // e.g., '4s'
+  showControls?: boolean;
+  showScanline?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
   defaultAspectRatio: '1/1',
-  defaultSlideWidth: 'auto',
   gap: '20px',
-  color: '#00f3ff', // Neón cyan por defecto
-  radius: '0px',
-  showScrollbar: false
+  accentColor: '#00f3ff',
+  bgColor: '#0a0a0c',
+  cardHeight: '400px',
+  scanSpeed: '4s',
+  showControls: true,
+  showScanline: true
 });
+
+defineEmits(['select']);
 
 const carouselRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
@@ -101,8 +108,11 @@ const onDragging = (e: MouseEvent) => {
 };
 
 const carouselStyles = computed(() => ({
-  '--cyber-neon': props.color,
+  '--cyber-neon': props.accentColor,
+  '--cyber-bg': props.bgColor,
   '--c-gap': props.gap,
+  '--c-height': props.cardHeight,
+  '--scan-speed': props.scanSpeed
 }));
 </script>
 
@@ -110,7 +120,6 @@ const carouselStyles = computed(() => ({
 .wrapper {
   position: relative;
   width: 100%;
-  --cyber-bg: #0a0a0c;
   background: var(--cyber-bg);
   display: flex;
   align-items: center;
@@ -144,11 +153,11 @@ const carouselStyles = computed(() => ({
 .slide {
   flex: 0 0 auto;
   aspect-ratio: var(--slide-aspect);
-  height: 400px;
+  height: var(--c-height);
   scroll-snap-align: center;
 }
 
-/* --- Botones de Navegación Cyber --- */
+/* --- HUD Navigation --- */
 .navBtn {
   position: absolute;
   z-index: 100;
@@ -163,7 +172,6 @@ const carouselStyles = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Corte angular estilo HUD */
   clip-path: polygon(0 20%, 20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%);
   transition: all 0.2s ease;
 }
@@ -178,7 +186,7 @@ const carouselStyles = computed(() => ({
 
 .navBtn:hover {
   background: var(--cyber-neon);
-  color: black;
+  color: #000;
   box-shadow: 0 0 20px var(--cyber-neon);
 }
 
@@ -196,25 +204,26 @@ const carouselStyles = computed(() => ({
   border: 1px solid var(--cyber-neon);
   clip-path: polygon(0 0, 92% 0, 100% 8%, 100% 100%, 8% 100%, 0 92%);
   overflow: hidden;
-  box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.1);
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
 }
 
 .media {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.7;
-  filter: contrast(1.2) brightness(0.8);
-  transition: all 0.4s ease;
+  opacity: 0.6;
+  filter: contrast(1.2) grayscale(0.5);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .slide:hover .media {
   opacity: 1;
-  filter: contrast(1.1) brightness(1.1);
-  transform: scale(1.05);
+  filter: contrast(1.1) grayscale(0);
+  transform: scale(1.08);
 }
 
-/* Decoraciones HUD */
+/* HUD Ornaments */
 .cornerTop {
   position: absolute;
   top: 0; right: 0;
@@ -222,6 +231,7 @@ const carouselStyles = computed(() => ({
   border-top: 3px solid var(--cyber-neon);
   border-right: 3px solid var(--cyber-neon);
   z-index: 2;
+  pointer-events: none;
 }
 
 .cornerBottom {
@@ -231,6 +241,7 @@ const carouselStyles = computed(() => ({
   border-bottom: 2px solid var(--cyber-neon);
   border-left: 2px solid var(--cyber-neon);
   z-index: 2;
+  pointer-events: none;
 }
 
 .scanline {
@@ -238,15 +249,15 @@ const carouselStyles = computed(() => ({
   top: 0; left: 0;
   width: 100%; height: 2px;
   background: linear-gradient(to right, transparent, var(--cyber-neon), transparent);
-  opacity: 0.2;
-  animation: scan 4s linear infinite;
+  opacity: 0.3;
+  animation: scan var(--scan-speed) linear infinite;
   z-index: 3;
   pointer-events: none;
 }
 
 @keyframes scan {
-  0% { top: 0; }
-  100% { top: 100%; }
+  0% { transform: translateY(0); }
+  100% { transform: translateY(var(--c-height)); }
 }
 
 .cyberLabel {
@@ -265,7 +276,7 @@ const carouselStyles = computed(() => ({
 
 .glitchText {
   color: var(--cyber-neon);
-  font-family: 'Courier New', monospace;
+  font-family: 'Courier New', Courier, monospace;
   font-weight: 900;
   font-size: 0.75rem;
   letter-spacing: 2px;
@@ -282,11 +293,11 @@ const carouselStyles = computed(() => ({
 }
 
 @keyframes blink {
-  50% { opacity: 0.2; }
+  50% { opacity: 0.1; }
 }
 
 @media (max-width: 768px) {
-  .slide { height: 320px; }
+  .slide { height: calc(var(--c-height) * 0.8); }
   .navBtn { display: none; }
 }
 </style>

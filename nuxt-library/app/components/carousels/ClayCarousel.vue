@@ -1,10 +1,10 @@
 <template>
   <div :class="$style.wrapper" :style="carouselStyles">
-    <button @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
+    <button v-if="showControls" @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
     </button>
     
-    <button @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
+    <button v-if="showControls" @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Siguiente">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
 
@@ -28,7 +28,7 @@
               <MediaRender :url="item.url" :alt="item.alt" :class="$style.media" />
             </div>
             
-            <div v-if="item.label" :class="$style.clayLabel">
+            <div v-if="item.label" :class="$style.clayLabel" @click.stop="$emit('label-click', item)">
               {{ item.label }}
             </div>
           </div>
@@ -47,25 +47,32 @@ interface CarouselItem {
   alt?: string;
   label?: string;
   aspectRatio?: string;
-  width?: string;
 }
 
-const props = withDefaults(defineProps<{
+interface Props {
   items: CarouselItem[];
   defaultAspectRatio?: string;
-  defaultSlideWidth?: string;
   gap?: string;
-  color?: string;
-  radius?: string;
-  showScrollbar?: boolean;
-}>(), {
+  accentColor?: string;
+  clayBg?: string;
+  borderRadius?: string;
+  cardHeight?: string;
+  depthIntensity?: number; // 0 to 1 scale for shadow softness
+  showControls?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
   defaultAspectRatio: '1/1',
-  defaultSlideWidth: 'auto',
   gap: '40px',
-  color: '#4f46e5',
-  radius: '48px',
-  showScrollbar: false
+  accentColor: '#4f46e5',
+  clayBg: '#ffffff',
+  borderRadius: '48px',
+  cardHeight: '420px',
+  depthIntensity: 1,
+  showControls: true
 });
+
+defineEmits(['label-click']);
 
 const carouselRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
@@ -93,18 +100,26 @@ const onDragging = (e: MouseEvent) => {
   carouselRef.value.scrollLeft = scrollLeft - (x - startX) * 1.5;
 };
 
-const carouselStyles = computed(() => ({
-  '--c-accent': props.color,
-  '--c-gap': props.gap,
-  '--c-radius': props.radius,
-}));
+const carouselStyles = computed(() => {
+  const intensity = props.depthIntensity;
+  return {
+    '--c-accent': props.accentColor,
+    '--c-gap': props.gap,
+    '--c-radius': props.borderRadius,
+    '--c-height': props.cardHeight,
+    '--clay-bg': props.clayBg,
+    /* Dynamic shadow calculation based on intensity */
+    '--shadow-outer': `${16 * intensity}px ${16 * intensity}px ${32 * intensity}px rgba(0,0,0,${0.08 * intensity})`,
+    '--shadow-inset-dark': `inset -${12 * intensity}px -${12 * intensity}px ${24 * intensity}px rgba(0,0,0,${0.05 * intensity})`,
+    '--shadow-inset-light': `inset ${12 * intensity}px ${12 * intensity}px ${24 * intensity}px rgba(255,255,255,0.9)`,
+  };
+});
 </script>
 
 <style module>
 .wrapper {
   position: relative;
   width: 100%;
-  --clay-bg: #ffffff;
   display: flex;
   align-items: center;
 }
@@ -136,11 +151,10 @@ const carouselStyles = computed(() => ({
 .slide {
   flex: 0 0 auto;
   aspect-ratio: var(--slide-aspect);
-  height: 420px;
+  height: var(--c-height);
   scroll-snap-align: center;
 }
 
-/* --- Botones de Navegación Clay --- */
 .navBtn {
   position: absolute;
   z-index: 20;
@@ -154,7 +168,6 @@ const carouselStyles = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  /* El look 3D del botón */
   box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.1), 
               inset -6px -6px 12px rgba(0, 0, 0, 0.05), 
               inset 6px 6px 12px rgba(255, 255, 255, 0.8);
@@ -163,7 +176,7 @@ const carouselStyles = computed(() => ({
 
 .navBtn:hover {
   transform: scale(1.1);
-  color: #000;
+  filter: brightness(0.98);
 }
 
 .navBtn:active {
@@ -176,16 +189,13 @@ const carouselStyles = computed(() => ({
 .prevBtn { left: 20px; }
 .nextBtn { right: 20px; }
 
-/* --- Clay Frame --- */
 .clayFrame {
   position: relative;
   width: 100%;
   height: 100%;
   background: var(--clay-bg);
   border-radius: var(--c-radius);
-  box-shadow: 16px 16px 32px rgba(0, 0, 0, 0.08), 
-              inset -12px -12px 24px rgba(0, 0, 0, 0.05), 
-              inset 12px 12px 24px rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-outer), var(--shadow-inset-dark), var(--shadow-inset-light);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -234,10 +244,12 @@ const carouselStyles = computed(() => ({
   align-self: center;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
 }
 
 @media (max-width: 768px) {
-  .slide { height: 350px; }
+  .slide { height: calc(var(--c-height) * 0.83); }
   .navBtn { display: none; }
 }
 </style>

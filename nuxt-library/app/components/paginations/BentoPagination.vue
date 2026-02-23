@@ -1,16 +1,23 @@
 <template>
-  <div :class="$style.bentoPagination">
+  <div 
+    v-bind="$attrs"
+    :class="[$style.bentoPagination, $style[size]]" 
+    :style="bentoStyles"
+  >
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navCell]" 
       @click="prevPage" 
       :disabled="modelValue === 1"
+      aria-label="Previous page"
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="m15 18-6-6 6-6"/>
-      </svg>
+      <slot name="prev-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </slot>
     </button>
 
-    <div :class="[$style.cell, $style.statusCell]">
+    <div v-if="showStatus" :class="[$style.cell, $style.statusCell]">
       <span :class="$style.label">{{ label }}</span>
       <div :class="$style.counter">
         <span :class="$style.current">{{ modelValue }}</span>
@@ -19,7 +26,7 @@
       </div>
     </div>
 
-    <div :class="[$style.cell, $style.quickJumpCell]">
+    <div v-if="showNumbers" :class="[$style.cell, $style.quickJumpCell]">
       <button 
         v-for="page in visiblePages" 
         :key="page"
@@ -28,28 +35,51 @@
       >
         {{ page }}
       </button>
+      
+      <span v-if="totalPages > 3 && modelValue < totalPages - 1" :class="$style.dots">...</span>
     </div>
 
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navCell]" 
       @click="nextPage" 
       :disabled="modelValue === totalPages"
+      aria-label="Next page"
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="m9 18 6-6-6-6"/>
-      </svg>
+      <slot name="next-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </slot>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: number;
   totalPages: number;
-  label: string;
-}>();
+  label?: string;
+  // Personalización Bento
+  accentColor?: string;
+  borderRadius?: string;
+  size?: 'sm' | 'md' | 'lg';
+  showStatus?: boolean;
+  showNumbers?: boolean;
+  maxVisible?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  label: 'PAGE',
+  accentColor: '#4f46e5',
+  borderRadius: '16px',
+  size: 'md',
+  showStatus: true,
+  showNumbers: true,
+  maxVisible: 3
+});
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -61,14 +91,24 @@ const nextPage = () => {
   if (props.modelValue < props.totalPages) emit('update:modelValue', props.modelValue + 1);
 };
 
-// Lógica para mostrar solo algunas páginas (ej: 1, 2, 3...)
 const visiblePages = computed(() => {
   const pages = [];
-  const start = Math.max(1, props.modelValue - 1);
-  const end = Math.min(props.totalPages, start + 2);
+  let start = Math.max(1, props.modelValue - Math.floor(props.maxVisible / 2));
+  let end = Math.min(props.totalPages, start + props.maxVisible - 1);
+
+  if (end - start + 1 < props.maxVisible) {
+    start = Math.max(1, end - props.maxVisible + 1);
+  }
+
   for (let i = start; i <= end; i++) pages.push(i);
   return pages;
 });
+
+const bentoStyles = computed(() => ({
+  '--b-accent': props.accentColor,
+  '--b-radius': props.borderRadius,
+  '--b-bg-container': 'rgba(240, 240, 243, 0.6)',
+}));
 </script>
 
 <style module>
@@ -76,53 +116,63 @@ const visiblePages = computed(() => {
   display: flex;
   gap: 8px;
   padding: 8px;
-  background: rgba(240, 240, 243, 0.5);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
+  background: var(--b-bg-container);
+  backdrop-filter: blur(12px);
+  border-radius: calc(var(--b-radius) + 8px);
   width: fit-content;
   font-family: 'Inter', system-ui, sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .cell {
   background: #ffffff;
-  padding: 8px 16px;
-  border-radius: 14px;
+  border-radius: var(--b-radius);
   display: flex;
   align-items: center;
-  border: 1px solid rgba(0, 0, 0, 0.03);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* --- Nav Buttons --- */
 .navCell {
   padding: 8px 12px;
   cursor: pointer;
-  color: #111827;
-  transition: all 0.2s ease;
+  color: #1f2937;
   justify-content: center;
 }
 
 .navCell:hover:not(:disabled) {
   background: #111827;
   color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.navCell:active:not(:disabled) {
+  transform: scale(0.95);
 }
 
 .navCell:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+  filter: grayscale(1);
 }
 
+/* --- Status Cell --- */
 .statusCell {
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
-  min-width: 80px;
+  gap: 1px;
+  min-width: 70px;
+  padding: 8px 20px;
 }
 
 .label {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 800;
   color: #9ca3af;
-  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .counter {
@@ -132,46 +182,58 @@ const visiblePages = computed(() => {
 }
 
 .current {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #4f46e5; /* Color acento */
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--b-accent);
 }
 
 .separator, .total {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #d1d5db;
 }
 
+/* --- Quick Jump --- */
 .quickJumpCell {
-  gap: 6px;
-  padding: 8px;
+  gap: 4px;
+  padding: 6px;
 }
 
 .pageBtn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: calc(var(--b-radius) - 6px);
   border: none;
   background: transparent;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  color: #6b7280;
+  color: #4b5563;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .pageBtn:hover {
   background: #f3f4f6;
+  color: #111827;
 }
 
 .activePage {
   background: #f3f4f6;
-  color: #111827;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+  color: var(--b-accent) !important;
+  box-shadow: inset 0 0 0 2px var(--b-accent);
 }
 
-@media (max-width: 400px) {
-  .quickJumpCell { display: none; }
+.dots {
+  color: #d1d5db;
+  font-weight: 800;
+  padding: 0 4px;
+}
+
+/* --- Sizes --- */
+.sm { transform: scale(0.85); }
+.lg { transform: scale(1.15); }
+
+@media (max-width: 500px) {
+  .statusCell { display: none; }
 }
 </style>

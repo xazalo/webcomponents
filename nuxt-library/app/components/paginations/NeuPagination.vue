@@ -1,24 +1,30 @@
 <template>
-  <div :class="$style.neuPagination">
+  <div 
+    v-bind="$attrs"
+    :class="[$style.neuPagination, $style[size]]" 
+    :style="neuStyles"
+  >
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navBtn]" 
       @click="prevPage" 
       :disabled="modelValue === 1"
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a8ba9" stroke-width="3">
-        <path d="m15 18-6-6 6-6"/>
-      </svg>
+      <slot name="prev-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" :stroke="iconColor" stroke-width="3">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </slot>
     </button>
 
-    <div :class="[$style.cell, $style.statusCell]">
-      <span :class="$style.label">PAG_IN</span>
+    <div v-if="showStatus" :class="[$style.cell, $style.statusCell]">
+      <span :class="$style.label">{{ prefix }}</span>
       <div :class="$style.counter">
         <span :class="$style.current">{{ modelValue }}</span>
         <span :class="$style.total">/ {{ totalPages }}</span>
       </div>
     </div>
 
-    <div :class="[$style.cell, $style.quickJumpCell]">
+    <div v-if="showNumbers" :class="[$style.cell, $style.quickJumpCell]">
       <button 
         v-for="page in visiblePages" 
         :key="page"
@@ -30,24 +36,49 @@
     </div>
 
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navBtn]" 
       @click="nextPage" 
       :disabled="modelValue === totalPages"
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7a8ba9" stroke-width="3">
-        <path d="m9 18 6-6-6-6"/>
-      </svg>
+      <slot name="next-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" :stroke="iconColor" stroke-width="3">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </slot>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: number;
   totalPages: number;
-}>();
+  prefix?: string;
+  // Personalización Neumórfica
+  baseColor?: string;     /* Color de la superficie (ej: #e0e5ec) */
+  accentColor?: string;   /* Color de la página activa */
+  iconColor?: string;     /* Color de las flechas */
+  intensity?: number;     /* Fuerza de la sombra (0.1 a 0.5) */
+  distance?: number;      /* Desplazamiento de sombra (2 a 12) */
+  size?: 'sm' | 'md' | 'lg';
+  showStatus?: boolean;
+  showNumbers?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  prefix: 'PAG_IN',
+  baseColor: '#e0e5ec',
+  accentColor: '#6d5dfc',
+  iconColor: '#7a8ba9',
+  intensity: 0.2,
+  distance: 6,
+  size: 'md',
+  showStatus: true,
+  showNumbers: true
+});
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -66,77 +97,84 @@ const visiblePages = computed(() => {
   for (let i = start; i <= end; i++) pages.push(i);
   return pages;
 });
+
+const neuStyles = computed(() => {
+  const dist = props.distance;
+  const blur = dist * 2;
+  // Cálculo de sombras basado en la baseColor (simplificado para el ejemplo)
+  return {
+    '--neu-bg': props.baseColor,
+    '--neu-accent': props.accentColor,
+    '--neu-text': props.iconColor,
+    '--neu-shadow-dark': `rgba(163, 177, 198, ${props.intensity * 3})`,
+    '--neu-shadow-light': `rgba(255, 255, 255, 0.8)`,
+    '--neu-dist': `${dist}px`,
+    '--neu-blur': `${blur}px`,
+  };
+});
 </script>
 
 <style module>
-:root {
-  --neu-bg: #e0e5ec;
-  --neu-light: #ffffff;
-  --neu-shadow: #a3b1c6;
-  --neu-accent: #6d5dfc;
-  --neu-text: #7a8ba9;
-}
-
 .neuPagination {
   display: flex;
   gap: 15px;
   padding: 15px;
   background: var(--neu-bg);
-  border-radius: 30px;
+  border-radius: 40px;
   width: fit-content;
   align-items: center;
-  /* Sombra del contenedor principal */
-  box-shadow: 9px 9px 16px var(--neu-shadow), 
-             -9px -9px 16px var(--neu-light);
+  box-shadow: var(--neu-dist) var(--neu-dist) var(--neu-blur) var(--neu-shadow-dark), 
+             calc(var(--neu-dist) * -1) calc(var(--neu-dist) * -1) var(--neu-blur) var(--neu-shadow-light);
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .cell {
   background: var(--neu-bg);
-  padding: 10px 18px;
   border-radius: 20px;
   display: flex;
-  /* Efecto de extrusión */
-  box-shadow: 5px 5px 10px var(--neu-shadow), 
-             -5px -5px 10px var(--neu-light);
+  box-shadow: calc(var(--neu-dist) / 1.5) calc(var(--neu-dist) / 1.5) var(--neu-blur) var(--neu-shadow-dark), 
+             calc(var(--neu-dist) / -1.5) calc(var(--neu-dist) / -1.5) var(--neu-blur) var(--neu-shadow-light);
+  transition: all 0.3s ease;
+  border: none;
 }
 
-.navCell {
-  width: 46px;
-  height: 46px;
+/* --- Botones --- */
+.navBtn {
+  width: 44px;
+  height: 44px;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  border: none;
-  outline: none;
-  transition: all 0.2s ease;
 }
 
-.navCell:active:not(:disabled) {
-  box-shadow: inset 3px 3px 6px var(--neu-shadow), 
-              inset -3px -3px 6px var(--neu-light);
-  transform: scale(0.98);
+.navBtn:active:not(:disabled) {
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), 
+              inset -3px -3px 6px var(--neu-shadow-light);
+  transform: scale(0.97);
 }
 
-.navCell:disabled {
-  opacity: 0.4;
+.navBtn:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
-  box-shadow: none; /* Se aplana cuando no sirve */
-  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: none;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
+/* --- Status Cell --- */
 .statusCell {
   flex-direction: column;
   align-items: center;
   min-width: 85px;
+  padding: 8px 18px;
   gap: 2px;
 }
 
 .label {
-  font-family: 'Inter', sans-serif;
   font-size: 0.6rem;
   font-weight: 800;
   color: var(--neu-text);
   letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .counter {
@@ -156,12 +194,12 @@ const visiblePages = computed(() => {
   color: var(--neu-text);
 }
 
+/* --- Quick Jump (Hundido) --- */
 .quickJumpCell {
-  gap: 8px;
-  padding: 8px 12px;
-  /* El contenedor de los botones de página está "hundido" */
-  box-shadow: inset 5px 5px 10px var(--neu-shadow), 
-              inset -5px -5px 10px var(--neu-light);
+  gap: 10px;
+  padding: 8px 14px;
+  box-shadow: inset 5px 5px 10px var(--neu-shadow-dark), 
+              inset -5px -5px 10px var(--neu-shadow-light);
 }
 
 .pageBtn {
@@ -171,21 +209,27 @@ const visiblePages = computed(() => {
   border: none;
   background: var(--neu-bg);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--neu-text);
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 3px 3px 6px var(--neu-shadow), 
-             -3px -3px 6px var(--neu-light);
+  transition: all 0.2s ease;
+  box-shadow: 3px 3px 6px var(--neu-shadow-dark), 
+             -3px -3px 6px var(--neu-shadow-light);
+}
+
+.pageBtn:hover:not(.activePage) {
+  transform: translateY(-1px);
 }
 
 .activePage {
-  background: var(--neu-bg);
   color: var(--neu-accent) !important;
-  /* El botón activo se "hunde" */
-  box-shadow: inset 3px 3px 6px var(--neu-shadow), 
-              inset -3px -3px 6px var(--neu-light);
+  box-shadow: inset 3px 3px 6px var(--neu-shadow-dark), 
+              inset -3px -3px 6px var(--neu-shadow-light);
 }
+
+/* --- Tamaños --- */
+.sm { transform: scale(0.8); }
+.lg { transform: scale(1.1); }
 
 @media (max-width: 520px) {
   .quickJumpCell { display: none; }

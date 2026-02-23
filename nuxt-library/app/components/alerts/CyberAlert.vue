@@ -1,16 +1,19 @@
 <template>
-  <div :class="[$style.cyberAlert, $style[type]]">
+  <div :class="[$style.cyberAlert, $style[type]]" :style="dynamicStyles">
     <div :class="$style.scanline"></div>
     
     <div :class="$style.cornerDeco"></div>
     <div :class="$style.edgeTag">VS: ALERT_SYS_v2.0</div>
 
     <div :class="$style.header">
-      <div :class="$style.glitchIcon" :data-text="type === 'error' ? '✖' : '▲'">
+      <div 
+        :class="[$style.glitchIcon, { [$style.errorAnim]: type === 'error' }]" 
+        :data-text="type === 'error' ? '✖' : '▲'"
+      >
         <slot name="icon">{{ type === 'error' ? '✖' : '▲' }}</slot>
       </div>
       <div :class="$style.titleStack">
-        <span :class="$style.subLabel">{{ statusText }}</span>
+        <span :class="$style.subLabel">{{ statusText || 'SYSTEM MESSAGE' }}</span>
         <h3 :class="$style.title">{{ title }}</h3>
       </div>
     </div>
@@ -32,26 +35,45 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+interface Props {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'error' | 'success';
   actionText: string;
-  statusText?: string
-  buttonText: string
-}>();
+  statusText?: string;
+  buttonText: string;
+  // Dynamic color props
+  neonColor?: string;
+  bgColor?: string;
+  glitchSecondary?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  bgColor: '#050505',
+  glitchSecondary: '#ff003c' // Pink glitch default
+});
 
 defineEmits(['close', 'action']);
+
+const dynamicStyles = computed(() => {
+  const neonPalette = {
+    info: '#00f0ff',   // Cyber Blue
+    warning: '#fcee0a', // Cyber Yellow
+    error: '#ff003c',   // Cyber Pink
+    success: '#39ff14'  // Neon Green
+  };
+
+  return {
+    '--current-neon': props.neonColor || neonPalette[props.type],
+    '--cb-black': props.bgColor,
+    '--glitch-color': props.glitchSecondary,
+  };
+});
 </script>
 
 <style module>
-:root {
-  --cb-yellow: #fcee0a;
-  --cb-blue: #00f0ff;
-  --cb-pink: #ff003c;
-  --cb-black: #050505;
-}
-
 .cyberAlert {
   display: flex;
   flex-direction: column;
@@ -60,7 +82,7 @@ defineEmits(['close', 'action']);
   background: var(--cb-black);
   border-left: 5px solid var(--current-neon);
   position: relative;
-  /* Corte diagonal agresivo en la esquina inferior derecha */
+  /* Aggressive bottom-right cut */
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
   font-family: 'Electrolize', 'Orbitron', sans-serif;
   color: #fff;
@@ -89,6 +111,7 @@ defineEmits(['close', 'action']);
   font-size: 10px;
   color: var(--current-neon);
   font-family: monospace;
+  opacity: 0.7;
 }
 
 .header {
@@ -103,7 +126,8 @@ defineEmits(['close', 'action']);
   font-weight: 900;
   color: var(--current-neon);
   position: relative;
-  text-shadow: 2px 0 var(--cb-pink), -2px 0 var(--cb-blue);
+  /* Use the glitch prop for the secondary shadow */
+  text-shadow: 2px 0 var(--glitch-color), -2px 0 #00f0ff;
 }
 
 .subLabel {
@@ -111,6 +135,7 @@ defineEmits(['close', 'action']);
   letter-spacing: 2px;
   color: var(--current-neon);
   opacity: 0.8;
+  display: block;
 }
 
 .title {
@@ -156,7 +181,7 @@ defineEmits(['close', 'action']);
 .actionBtn:hover {
   filter: brightness(1.2);
   transform: translateX(5px);
-  box-shadow: -5px 0 0 var(--cb-pink);
+  box-shadow: -5px 0 0 var(--glitch-color);
 }
 
 .closeBtn {
@@ -167,20 +192,14 @@ defineEmits(['close', 'action']);
   font-weight: 700;
   cursor: pointer;
   clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%);
+  transition: background 0.2s;
 }
 
 .closeBtn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Colores de Sistema */
-.info { --current-neon: var(--cb-blue); }
-.warning { --current-neon: var(--cb-yellow); }
-.error { --current-neon: var(--cb-pink); }
-.success { --current-neon: var(--cb-blue); } /* O verde si prefieres */
-
-/* Efecto de glitch sutil */
-.error .glitchIcon {
+.errorAnim {
   animation: glitch-anim 2s infinite;
 }
 

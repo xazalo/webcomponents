@@ -1,10 +1,10 @@
 <template>
   <div :class="$style.wrapper" :style="carouselStyles">
-    <button @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
+    <button v-if="showControls" @click="scroll('prev')" :class="[$style.navBtn, $style.prevBtn]" aria-label="Atrás">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
     </button>
     
-    <button @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Adelante">
+    <button v-if="showControls" @click="scroll('next')" :class="[$style.navBtn, $style.nextBtn]" aria-label="Adelante">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </button>
 
@@ -23,8 +23,8 @@
           :class="$style.slide"
           :style="{ '--slide-aspect': item.aspectRatio || defaultAspectRatio }"
         >
-          <div :class="$style.glassFrame">
-            <div :class="$style.reflection" />
+          <div :class="$style.glassFrame" @click="$emit('item-click', item)">
+            <div v-if="showReflection" :class="$style.reflection" />
             
             <div :class="$style.mediaWrapper">
               <MediaRender :url="item.url" :alt="item.alt" :class="$style.media" />
@@ -50,25 +50,36 @@ interface CarouselItem {
   alt?: string;
   label?: string;
   aspectRatio?: string;
-  width?: string;
 }
 
-const props = withDefaults(defineProps<{
+interface Props {
   items: CarouselItem[];
   defaultAspectRatio?: string;
-  defaultSlideWidth?: string;
   gap?: string;
-  color?: string;
-  radius?: string;
-  showScrollbar?: boolean;
-}>(), {
+  accentColor?: string;
+  borderRadius?: string;
+  cardHeight?: string;
+  blurStrength?: string;     // e.g., '12px'
+  glassOpacity?: number;      // 0 to 1
+  shadowColor?: string;      // rgba value
+  showControls?: boolean;
+  showReflection?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
   defaultAspectRatio: '1/1',
-  defaultSlideWidth: 'auto',
   gap: '30px',
-  color: 'rgba(255, 255, 255, 0.5)',
-  radius: '24px',
-  showScrollbar: false
+  accentColor: 'rgba(255, 255, 255, 0.5)',
+  borderRadius: '24px',
+  cardHeight: '400px',
+  blurStrength: '12px',
+  glassOpacity: 0.15,
+  shadowColor: 'rgba(31, 38, 135, 0.15)',
+  showControls: true,
+  showReflection: true
 });
+
+defineEmits(['item-click']);
 
 const carouselRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
@@ -88,9 +99,7 @@ const startDragging = (e: MouseEvent) => {
   startX = e.pageX - (carouselRef.value?.offsetLeft || 0);
   scrollLeft = carouselRef.value?.scrollLeft || 0;
 };
-
 const stopDragging = () => { isDragging.value = false; };
-
 const onDragging = (e: MouseEvent) => {
   if (!isDragging.value || !carouselRef.value) return;
   e.preventDefault();
@@ -99,9 +108,13 @@ const onDragging = (e: MouseEvent) => {
 };
 
 const carouselStyles = computed(() => ({
-  '--c-accent': props.color,
+  '--c-accent': props.accentColor,
   '--c-gap': props.gap,
-  '--c-radius': props.radius,
+  '--c-radius': props.borderRadius,
+  '--c-height': props.cardHeight,
+  '--glass-blur': props.blurStrength,
+  '--glass-opacity': props.glassOpacity,
+  '--glass-shadow-color': props.shadowColor,
 }));
 </script>
 
@@ -109,9 +122,6 @@ const carouselStyles = computed(() => ({
 .wrapper {
   position: relative;
   width: 100%;
-  --glass-bg: rgba(255, 255, 255, 0.15);
-  --glass-border: rgba(255, 255, 255, 0.25);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
   display: flex;
   align-items: center;
 }
@@ -123,6 +133,7 @@ const carouselStyles = computed(() => ({
   scroll-snap-type: x mandatory;
   padding: 40px 0;
   scrollbar-width: none;
+  cursor: grab;
 }
 
 .carouselRoot::-webkit-scrollbar { display: none; }
@@ -142,11 +153,11 @@ const carouselStyles = computed(() => ({
 .slide {
   flex: 0 0 auto;
   aspect-ratio: var(--slide-aspect);
-  height: 400px;
+  height: var(--c-height);
   scroll-snap-align: center;
 }
 
-/* --- Botones de Navegación Glass --- */
+/* --- Glass Controls --- */
 .navBtn {
   position: absolute;
   z-index: 50;
@@ -154,8 +165,8 @@ const carouselStyles = computed(() => ({
   height: 48px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
   cursor: pointer;
@@ -163,13 +174,13 @@ const carouselStyles = computed(() => ({
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .navBtn:hover {
   background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-50%) scale(1.1);
   border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-50%) scale(1.1);
 }
 
 .prevBtn { left: 20px; top: 50%; transform: translateY(-50%); }
@@ -180,12 +191,12 @@ const carouselStyles = computed(() => ({
   position: relative;
   width: 100%;
   height: 100%;
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, var(--glass-opacity));
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   border-radius: var(--c-radius);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  border: 1px solid rgba(255, 255, 255, calc(var(--glass-opacity) + 0.1));
+  box-shadow: 0 8px 32px 0 var(--glass-shadow-color);
   padding: 12px;
   overflow: hidden;
   transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), border-color 0.4s ease;
@@ -193,7 +204,7 @@ const carouselStyles = computed(() => ({
 
 .slide:hover .glassFrame {
   transform: translateY(-10px);
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: var(--c-accent);
 }
 
 .reflection {
@@ -201,7 +212,7 @@ const carouselStyles = computed(() => ({
   top: 0; left: 0; right: 0;
   height: 50%;
   background: linear-gradient(
-    rgba(255, 255, 255, 0.15) 0%, 
+    rgba(255, 255, 255, 0.2) 0%, 
     rgba(255, 255, 255, 0) 100%
   );
   pointer-events: none;
@@ -244,8 +255,8 @@ const carouselStyles = computed(() => ({
 .blurOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.5));
   z-index: 1;
 }
 
@@ -261,7 +272,7 @@ const carouselStyles = computed(() => ({
 }
 
 @media (max-width: 768px) {
-  .slide { height: 350px; }
+  .slide { height: calc(var(--c-height) * 0.85); }
   .navBtn { display: none; }
 }
 </style>

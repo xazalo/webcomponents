@@ -1,54 +1,83 @@
 <template>
-  <div :class="$style.speedPagination">
+  <div 
+    v-bind="$attrs"
+    :class="[$style.speedPagination, $style[size]]" 
+    :style="speedStyles"
+  >
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navBtn]" 
       @click="prevPage" 
       :disabled="modelValue === 1"
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
-        <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/>
-      </svg>
+      <slot name="prev-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+          <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/>
+        </svg>
+      </slot>
     </button>
 
-    <div :class="[$style.cell, $style.statusCell]">
-      <div :class="$style.redline"></div>
-      <span :class="$style.label">PAG / ID</span>
+    <div v-if="showStatus" :class="[$style.cell, $style.statusCell]">
+      <div v-if="redline" :class="$style.redline"></div>
+      <span :class="$style.label">{{ label }}</span>
       <div :class="$style.counter">
         <span :class="$style.current">{{ modelValue }}</span>
-        <span :class="$style.total">{{ totalPages }}</span>
+        <span :class="$style.total">/{{ totalPages }}</span>
       </div>
     </div>
 
-    <div :class="[$style.cell, $style.quickJumpCell]">
+    <div v-if="showNumbers" :class="[$style.cell, $style.quickJumpCell]">
       <button 
         v-for="page in visiblePages" 
         :key="page"
         :class="[$style.pageBtn, { [$style.activePage]: page === modelValue }]"
         @click="$emit('update:modelValue', page)"
       >
-        {{ page }}
+        <span :class="$style.btnText">{{ page }}</span>
       </button>
     </div>
 
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navBtn]" 
       @click="nextPage" 
       :disabled="modelValue === totalPages"
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
-        <path d="M13 17l5-5-5-5M6 17l5-5-5-5"/>
-      </svg>
+      <slot name="next-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+          <path d="M13 17l5-5-5-5M6 17l5-5-5-5"/>
+        </svg>
+      </slot>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: number;
   totalPages: number;
-}>();
+  label?: string;
+  // Configuración Racing
+  teamColor?: string;     /* Color principal (ej: #e60000 - Ferrari Red) */
+  skewAngle?: number;     /* Grados de inclinación (ej: -12) */
+  texture?: boolean;      /* ¿Mostrar rejilla de fibra de carbono? */
+  redline?: boolean;      /* Detalle de línea de límite de revoluciones */
+  size?: 'sm' | 'md' | 'lg';
+  showStatus?: boolean;
+  showNumbers?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  label: 'PAG / ID',
+  teamColor: '#e60000',
+  skewAngle: -12,
+  texture: true,
+  redline: true,
+  size: 'md',
+  showStatus: true,
+  showNumbers: true
+});
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -67,118 +96,127 @@ const visiblePages = computed(() => {
   for (let i = start; i <= end; i++) pages.push(i);
   return pages;
 });
+
+const speedStyles = computed(() => ({
+  '--s-team': props.teamColor,
+  '--s-skew': `skewX(${props.skewAngle}deg)`,
+  '--s-unskew': `skewX(${Math.abs(props.skewAngle)}deg)`,
+  '--s-grid': props.texture ? 'radial-gradient(#333 1px, transparent 0)' : 'none'
+}));
 </script>
 
 <style module>
-:root {
-  --speed-black: #0f0f11;
-  --speed-red: #e60000;
-  --speed-white: #f0f0f0;
-  --speed-skew: skewX(-12deg);
-}
-
 .speedPagination {
   display: flex;
-  gap: 6px;
-  padding: 8px;
-  background: var(--speed-black);
-  /* Textura de rejilla de competición */
-  background-image: radial-gradient(#333 1px, transparent 0);
+  gap: 8px;
+  padding: 10px;
+  background: #0f0f11;
+  background-image: var(--s-grid);
   background-size: 4px 4px;
   width: fit-content;
   align-items: center;
-  border-bottom: 3px solid var(--speed-red);
+  border-bottom: 4px solid var(--s-team);
+  font-family: 'Arial Black', sans-serif;
 }
 
 .cell {
   background: #1a1b1e;
-  padding: 6px 14px;
-  transform: var(--speed-skew);
+  padding: 6px 16px;
+  transform: var(--s-skew);
   border: 1px solid #333;
   display: flex;
   align-items: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease-out;
 }
 
-.navCell {
+/* --- Botones Navegación --- */
+.navBtn {
   cursor: pointer;
-  color: var(--speed-white);
-  padding: 6px 10px;
+  color: #fff;
+  padding: 8px 12px;
 }
 
-.navCell:hover:not(:disabled) {
-  background: var(--speed-red);
-  border-color: var(--speed-red);
+.navBtn:hover:not(:disabled) {
+  background: var(--s-team);
+  border-color: #fff;
+  transform: var(--s-skew) translateY(-2px);
 }
 
-.navCell:disabled {
-  opacity: 0.2;
+.navBtn:disabled {
+  opacity: 0.15;
   cursor: not-allowed;
   filter: grayscale(1);
 }
 
+/* --- Status Cell (Velocímetro) --- */
 .statusCell {
   flex-direction: column;
-  min-width: 100px;
+  min-width: 110px;
   position: relative;
-  border-left: 4px solid var(--speed-red);
+  border-left: 5px solid var(--s-team);
 }
 
 .redline {
   position: absolute;
-  top: 0; right: 0; width: 20%; height: 2px;
-  background: var(--speed-red);
+  top: 0; right: 0; width: 30%; height: 3px;
+  background: var(--s-team);
 }
 
 .label {
-  font-family: 'Arial Black', sans-serif;
   font-size: 0.55rem;
   font-weight: 900;
   font-style: italic;
   color: #666;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
+  transform: var(--s-unskew);
 }
 
 .counter {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  transform: skewX(12deg); /* Des-inclinamos el texto interno para legibilidad */
+  gap: 4px;
+  transform: var(--s-unskew);
 }
 
 .current {
-  font-family: 'Orbitron', sans-serif; /* O una sans-serif muy bold */
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: 900;
-  color: var(--speed-white);
+  color: #fff;
   line-height: 1;
+  font-style: italic;
 }
 
 .total {
-  font-family: 'Arial Black', sans-serif;
-  font-size: 0.7rem;
-  color: var(--speed-red);
+  font-size: 0.8rem;
+  color: var(--s-team);
   font-style: italic;
+  opacity: 0.8;
 }
 
+/* --- Quick Jump --- */
 .quickJumpCell {
-  gap: 4px;
+  gap: 6px;
   background: transparent;
   border: none;
+  padding: 0;
 }
 
 .pageBtn {
-  width: 32px;
-  height: 32px;
-  transform: var(--speed-skew);
+  width: 36px;
+  height: 36px;
+  transform: var(--s-skew);
   background: #2a2b2e;
   border: none;
-  color: #999;
+  color: #888;
   font-weight: 900;
   font-style: italic;
   cursor: pointer;
-  transition: 0.1s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
+
+.btnText { transform: var(--s-unskew); }
 
 .pageBtn:hover {
   background: #444;
@@ -186,12 +224,16 @@ const visiblePages = computed(() => {
 }
 
 .activePage {
-  background: var(--speed-white) !important;
-  color: var(--speed-black) !important;
-  box-shadow: -4px 0 0 var(--speed-red);
+  background: #fff !important;
+  color: #000 !important;
+  box-shadow: -5px 0 0 var(--s-team);
 }
 
+/* --- Tamaños --- */
+.sm { transform: scale(0.8); }
+.lg { transform: scale(1.15); }
+
 @media (max-width: 500px) {
-  .quickJumpCell { display: none; }
+  .statusCell { display: none; }
 }
 </style>

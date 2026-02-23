@@ -1,11 +1,22 @@
 <template>
   <Teleport to="body">
-    <Transition name="brutal-pop">
-      <div v-if="modelValue" :class="$style.overlay" @click.self="$emit('update:modelValue', false)">
-        <div v-bind="$attrs" :class="$style.brutalModal" :style="brutalStyles">
+    <Transition :name="$style.brutalPop">
+      <div 
+        v-if="modelValue" 
+        :class="$style.overlay" 
+        @click.self="handleClose"
+      >
+        <div 
+          v-bind="$attrs" 
+          :class="[$style.brutalModal, $style[size]]" 
+          :style="brutalStyles"
+        >
           <div :class="$style.brutalHeader">
-            <span :class="$style.title">!! !! !!</span>
-            <button @click="$emit('update:modelValue', false)" :class="$style.miniClose">×</button>
+            <span :class="$style.title">{{ headerText }}</span>
+            <div :class="$style.headerControls">
+              <button :class="$style.controlBtn">_</button>
+              <button @click="handleClose" :class="$style.miniClose">×</button>
+            </div>
           </div>
           
           <div :class="$style.inner">
@@ -13,9 +24,13 @@
               <slot />
             </div>
             
-            <button @click="$emit('update:modelValue', false)" :class="$style.mainAction">
-              {{ buttonText }}
-            </button>
+            <footer :class="$style.footer">
+              <slot name="actions">
+                <button @click="handleClose" :class="$style.mainAction">
+                  {{ buttonText }}
+                </button>
+              </slot>
+            </footer>
           </div>
         </div>
       </div>
@@ -25,39 +40,90 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-const props = defineProps<{ modelValue: boolean; color?: string, buttonText: string }>();
+defineOptions({ inheritAttrs: false });
+
+interface Props {
+  modelValue: boolean;
+  buttonText?: string;
+  headerText?: string;
+  color?: string;
+  // Configuración Brutalista
+  borderWidth?: string;   /* Grosor de los trazos (ej: 4px) */
+  shadowOffset?: string;  /* Desplazamiento sombra (ej: 12px) */
+  tilt?: number;          /* Inclinación leve (ej: -1) */
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  buttonText: 'OK_CONFIRM',
+  headerText: 'CRITICAL_MESSAGE.SYS',
+  color: '#ff3e00',
+  borderWidth: '4px',
+  shadowOffset: '12px',
+  tilt: 0,
+  size: 'md'
+});
+
+const emit = defineEmits(['update:modelValue', 'close']);
+
+const handleClose = () => {
+  emit('update:modelValue', false);
+  emit('close');
+};
 
 const brutalStyles = computed(() => ({
-  '--b-accent': props.color || '#ff3e00', // Naranja vibrante
+  '--b-accent': props.color,
+  '--b-border': props.borderWidth,
+  '--b-shadow': props.shadowOffset,
+  '--b-tilt': `${props.tilt}deg`,
 }));
 </script>
 
 <style module>
+/* --- Animación Pop --- */
+.brutalPopEnterActive {
+  animation: brutalSlide 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+.brutalPopLeaveActive {
+  animation: brutalSlide 0.15s reverse ease-in;
+}
+
+@keyframes brutalSlide {
+  from { transform: scale(0.5) rotate(5deg); opacity: 0; }
+  to { transform: scale(1) rotate(var(--b-tilt)); opacity: 1; }
+}
+
+/* --- Estructura --- */
 .overlay {
   position: fixed; 
   inset: 0; 
-  background: rgba(255, 255, 255, 0.8); /* Fondo claro, no borroso */
+  background: rgba(0, 0, 0, 0.4); /* Oscurecemos para que el blanco resalte */
   display: flex; 
   align-items: center; 
   justify-content: center; 
   z-index: 9999;
+  padding: 20px;
 }
 
 .brutalModal {
   background: #ffffff;
-  width: 90%;
-  max-width: 400px;
-  border: 4px solid #000000;
-  border-radius: 0px; /* Esquinas vivas */
-  box-shadow: 12px 12px 0px 0px #000000;
+  width: 100%;
+  border: var(--b-border) solid #000000;
+  border-radius: 0px; 
+  box-shadow: var(--b-shadow) var(--b-shadow) 0px 0px #000000;
   position: relative;
   overflow: hidden;
-  animation: brutalSlide 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  transform: rotate(var(--b-tilt));
 }
 
+.sm { max-width: 320px; }
+.md { max-width: 420px; }
+.lg { max-width: 580px; }
+
+/* --- Cabecera --- */
 .brutalHeader {
   background: #000000;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -65,61 +131,74 @@ const brutalStyles = computed(() => ({
 }
 
 .title {
-  font-size: 0.75rem;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.8rem;
   font-weight: 900;
-  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.miniClose {
-  background: var(--b-accent);
-  border: 2px solid #ffffff;
-  color: white;
+.headerControls { display: flex; gap: 8px; }
+
+.controlBtn, .miniClose {
+  background: #ffffff;
+  border: 2px solid #000000;
+  color: #000;
   font-weight: 900;
   cursor: pointer;
-  line-height: 1;
-  padding: 2px 6px;
+  padding: 0px 8px;
+  font-size: 1rem;
 }
 
+.miniClose:hover {
+  background: var(--b-accent);
+  color: white;
+}
+
+/* --- Cuerpo --- */
 .inner { 
-  padding: 2rem;
+  padding: 2.5rem 2rem;
   display: flex; 
   flex-direction: column; 
-  gap: 1.5rem; 
+  gap: 2rem; 
 }
 
 .content {
-  font-family: 'Courier New', Courier, monospace; /* Tipografía tipo máquina */
-  font-weight: 700;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 800;
   color: #000000;
-  line-height: 1.4;
-  font-size: 1.1rem;
+  line-height: 1.3;
+  font-size: 1.2rem;
 }
 
+/* --- Botón Brutal --- */
 .mainAction {
   background: var(--b-accent);
-  color: #000000;
-  border: 3px solid #000000;
-  padding: 1rem;
+  color: #ffffff;
+  border: var(--b-border) solid #000000;
+  padding: 1.2rem;
+  font-family: 'Courier New', Courier, monospace;
   font-weight: 900;
   font-size: 1.2rem;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 4px 4px 0px 0px #000000;
-  transition: all 0.1s;
+  width: 100%;
+  box-shadow: 6px 6px 0px 0px #000000;
+  transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .mainAction:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px 0px #000000;
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0px 0px #000000;
 }
 
 .mainAction:active {
-  transform: translate(4px, 4px);
+  transform: translate(6px, 6px);
   box-shadow: 0px 0px 0px 0px #000000;
 }
 
-@keyframes brutalSlide {
-  from { transform: scale(0.8) translateY(20px); opacity: 0; }
-  to { transform: scale(1) translateY(0); opacity: 1; }
+/* Responsive */
+@media (max-width: 480px) {
+  .brutalModal { box-shadow: 8px 8px 0px 0px #000000; }
+  .inner { padding: 1.5rem; }
 }
 </style>

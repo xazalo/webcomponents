@@ -1,5 +1,5 @@
 <template>
-  <div :class="[$style.neuAlert, $style[type]]">
+  <div :class="[$style.neuAlert, $style[type]]" :style="dynamicStyles">
     <div :class="$style.iconInverted">
       <div :class="$style.iconInner">
         <slot name="icon">!</slot>
@@ -24,31 +24,47 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+interface Props {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'error' | 'success';
   actionText: string;
   buttonText: string;
-}>();
+  // Neumorphic core props
+  baseBg?: string;      // The main surface color
+  lightShadow?: string; // The highlight (usually white)
+  darkShadow?: string;  // The depth shadow
+  accentColor?: string; // Icon and button text color
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  baseBg: '#e0e5ec',
+  lightShadow: '#ffffff',
+  darkShadow: '#a3b1c6',
+});
 
 defineEmits(['close', 'action']);
+
+const dynamicStyles = computed(() => {
+  const typeColors = {
+    info: '#6d5dfc',
+    warning: '#fab1a0',
+    error: '#ff7675',
+    success: '#55efc4'
+  };
+
+  return {
+    '--neu-bg': props.baseBg,
+    '--neu-light': props.lightShadow,
+    '--neu-shadow': props.darkShadow,
+    '--type-accent': props.accentColor || typeColors[props.type],
+  };
+});
 </script>
 
 <style module>
-:root {
-  /* Color base crucial para el efecto */
-  --neu-bg: #e0e5ec;
-  --neu-light: #ffffff;
-  --neu-shadow: #a3b1c6;
-  
-  /* Colores de acento sutiles */
-  --neu-info: #6d5dfc;
-  --neu-error: #ff7675;
-  --neu-success: #55efc4;
-  --neu-warning: #fab1a0;
-}
-
 .neuAlert {
   display: flex;
   flex-direction: column;
@@ -57,12 +73,12 @@ defineEmits(['close', 'action']);
   background: var(--neu-bg);
   border-radius: 50px;
   
-  /* Sombras de extrusión: luz arriba-izquierda, sombra abajo-derecha */
+  /* Extrusion: Light top-left, Shadow bottom-right */
   box-shadow: 
     9px 9px 16px var(--neu-shadow), 
     -9px -9px 16px var(--neu-light);
   
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', system-ui, sans-serif;
   transition: all 0.3s ease;
 }
 
@@ -75,7 +91,7 @@ defineEmits(['close', 'action']);
   justify-content: center;
   margin-bottom: 20px;
   
-  /* Efecto hundido (inset) */
+  /* Inset (sunken) effect */
   background: var(--neu-bg);
   box-shadow: 
     inset 6px 6px 10px var(--neu-shadow), 
@@ -86,14 +102,13 @@ defineEmits(['close', 'action']);
   font-size: 1.5rem;
   font-weight: 900;
   color: var(--type-accent);
-  /* Un pequeño resplandor para el icono */
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
 }
 
 .typeLabel {
   font-size: 0.7rem;
   font-weight: 800;
-  color: #a3b1c6;
+  color: var(--neu-shadow);
   letter-spacing: 1.5px;
 }
 
@@ -126,7 +141,7 @@ defineEmits(['close', 'action']);
   font-weight: 700;
   cursor: pointer;
   
-  /* Botón con relieve */
+  /* Raised effect */
   box-shadow: 
     5px 5px 10px var(--neu-shadow), 
     -5px -5px 10px var(--neu-light);
@@ -134,7 +149,7 @@ defineEmits(['close', 'action']);
 }
 
 .confirmBtn:active {
-  /* Al pulsar, se hunde */
+  /* Pressed (sunken) effect */
   box-shadow: 
     inset 3px 3px 6px var(--neu-shadow), 
     inset -3px -3px 6px var(--neu-light);
@@ -149,15 +164,10 @@ defineEmits(['close', 'action']);
   color: #7a8ba9;
   font-weight: 600;
   cursor: pointer;
+  transition: color 0.2s;
 }
 
 .cancelBtn:hover {
   color: #44475a;
 }
-
-/* Variantes de color para el acento del texto/iconos */
-.info { --type-accent: var(--neu-info); }
-.warning { --type-accent: var(--neu-warning); }
-.error { --type-accent: var(--neu-error); }
-.success { --type-accent: var(--neu-success); }
 </style>

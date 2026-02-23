@@ -1,17 +1,36 @@
 <template>
-  <label v-bind="$attrs" :class="$style.speedWrapper" :style="speedStyles">
+  <label 
+    v-bind="$attrs" 
+    :class="[
+      $style.speedWrapper, 
+      $style[size], 
+      { [$style.checked]: modelValue, [$style.disabled]: disabled }
+    ]" 
+    :style="speedStyles"
+  >
+    <div :class="$style.motionBlur" />
+
     <div :class="$style.inputContainer">
       <input 
         type="checkbox" 
         :checked="modelValue" 
-        @change="$emit('update:modelValue', !modelValue)"
+        :disabled="disabled"
+        @change="$emit('update:modelValue', $event.target.checked)"
       />
       <div :class="$style.speedBox">
-        <Icon v-if="modelValue" name="lucide:zap" :class="$style.checkIcon" />
+        <Transition name="zap-pop">
+          <svg v-if="modelValue" viewBox="0 0 24 24" :class="$style.checkIcon">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
+          </svg>
+        </Transition>
       </div>
     </div>
-    <span v-if="label" :class="$style.label">{{ label }}</span>
-    <div :class="$style.trail"></div>
+
+    <span v-if="label" :class="$style.label">
+      {{ label }}
+    </span>
+
+    <div :class="$style.nitroLine" />
   </label>
 </template>
 
@@ -19,15 +38,34 @@
 import { computed } from 'vue';
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: boolean;
   label?: string;
-  color?: string;
-}>();
+  disabled?: boolean;
+  // Estética Speed
+  accentColor?: string;   /* Color de la energía/nitro */
+  baseColor?: string;     /* Color del chasis (fondo) */
+  skewAngle?: number;     /* Grados de inclinación */
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: false,
+  disabled: false,
+  accentColor: '#ff004c',
+  baseColor: '#0f0f0f',
+  skewAngle: 15,
+  size: 'md'
+});
+
+defineEmits(['update:modelValue']);
 
 const speedStyles = computed(() => ({
-  '--s-accent': props.color || '#ff004c',
-  '--s-skew': '-15deg'
+  '--s-accent': props.accentColor,
+  '--s-bg': props.baseColor,
+  '--s-skew': `-${props.skewAngle}deg`,
+  '--s-skew-inv': `${props.skewAngle}deg`,
+  '--s-glow': `${props.accentColor}66`,
 }));
 </script>
 
@@ -38,96 +76,127 @@ const speedStyles = computed(() => ({
   gap: 0.8rem;
   cursor: pointer;
   padding: 0.5rem 1.2rem;
-  background: #0f0f0f;
-  border-radius: 4px;
+  background: var(--s-bg);
+  border-radius: 2px;
   position: relative;
   overflow: hidden;
   user-select: none;
-  transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-  
-  /* Inclinación aerodinámica del contenedor */
   transform: skewX(var(--s-skew));
-  border-right: 4px solid transparent;
-}
-
-.speedWrapper:hover {
-  background: #1a1a1a;
-  transform: skewX(var(--s-skew)) translateX(5px);
-  border-right-color: var(--s-accent);
+  border-left: 3px solid transparent;
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .inputContainer {
-  position: relative;
   display: flex;
-  /* Corregimos inclinación para que el cuadro se vea recto */
-  transform: skewX(calc(var(--s-skew) * -1));
+  transform: skewX(var(--s-skew-inv));
 }
 
 .inputContainer input {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .speedBox {
-  width: 1.3rem;
-  height: 1.3rem;
+  width: 1.2em;
+  height: 1.2em;
   background: #2a2a2a;
   border: 1px solid #444;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  transform: rotate(-5deg); /* Un toque de asimetría */
 }
 
 /* Estado Marcado */
-.inputContainer input:checked ~ .speedBox {
+.checked {
+  background: #1a1a1a;
+  border-left-color: var(--s-accent);
+  box-shadow: -5px 0 15px var(--s-glow);
+}
+
+.checked .speedBox {
   background: var(--s-accent);
   border-color: #fff;
+  transform: rotate(0deg) scale(1.1);
   box-shadow: 0 0 15px var(--s-accent);
 }
 
 .checkIcon {
   color: white;
-  width: 1rem;
-  height: 1rem;
-  stroke-width: 3px;
+  width: 80%;
+  height: 80%;
 }
 
 .label {
-  position: relative;
-  z-index: 2;
-  font-size: 0.85rem;
+  font-size: 0.9em;
   font-weight: 900;
   font-style: italic;
   text-transform: uppercase;
-  color: #eee;
+  color: #888;
   letter-spacing: 0.05em;
-  /* Corregimos inclinación del texto */
-  transform: skewX(calc(var(--s-skew) * -1));
-  transition: color 0.3s ease;
+  transform: skewX(var(--s-skew-inv));
+  transition: all 0.3s ease;
 }
 
-/* Estela de velocidad decorativa */
-.trail {
-  position: absolute;
-  top: 50%;
-  left: -100%;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--s-accent), transparent);
-  transition: left 0.4s ease;
-  pointer-events: none;
-}
-
-.speedWrapper:hover .trail {
-  left: 100%;
-}
-
-.speedWrapper:has(input:checked) .label {
+.checked .label {
   color: #fff;
   text-shadow: 0 0 8px var(--s-accent);
 }
 
-.speedWrapper:active {
-  transform: skewX(var(--s-skew)) scale(0.95);
+/* Nitro Line (Hover Effect) */
+.nitroLine {
+  position: absolute;
+  bottom: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--s-accent), transparent);
+  transition: left 0.5s ease-in;
+}
+
+/* Motion Blur Effect */
+.motionBlur {
+  position: absolute;
+  inset: 0;
+  background: var(--s-accent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  mix-blend-mode: overlay;
+}
+
+/* Hover & Active States */
+.speedWrapper:hover:not(.disabled) {
+  transform: skewX(var(--s-skew)) translateX(8px);
+  background: #151515;
+}
+
+.speedWrapper:hover .nitroLine {
+  left: 100%;
+}
+
+.speedWrapper:active:not(.disabled) {
+  transform: skewX(var(--s-skew)) scale(0.95) translateX(4px);
+}
+
+/* Tamaños */
+.sm { font-size: 12px; }
+.md { font-size: 16px; }
+.lg { font-size: 22px; }
+
+.disabled {
+  opacity: 0.3;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+/* Animación del Rayo (Zap) */
+:global(.zap-pop-enter-active) {
+  animation: zap-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes zap-in {
+  0% { transform: scale(0) translateY(10px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 </style>

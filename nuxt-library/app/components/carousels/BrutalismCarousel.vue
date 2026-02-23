@@ -1,11 +1,11 @@
 <template>
   <div :class="$style.wrapper" :style="carouselStyles">
-    <div :class="$style.controls">
+    <div v-if="showControls" :class="$style.controls">
       <button @click="scroll('prev')" :class="$style.navBtn" aria-label="Anterior">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="m15 18-6-6 6-6"/></svg>
       </button>
       <button @click="scroll('next')" :class="$style.navBtn" aria-label="Siguiente">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="m9 18 6-6-6-6"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="m9 18 6-6 6-6"/></svg>
       </button>
     </div>
     
@@ -31,7 +31,7 @@
               {{ item.label }}
             </div>
             
-            <div :class="$style.edgeDecorator" />
+            <div v-if="showDecorators" :class="$style.edgeDecorator" />
           </div>
         </div>
       </div>
@@ -48,24 +48,35 @@ interface CarouselItem {
   alt?: string;
   label?: string;
   aspectRatio?: string;
-  width?: string;
 }
 
-const props = withDefaults(defineProps<{
+interface Props {
   items: CarouselItem[];
   defaultAspectRatio?: string;
-  defaultSlideWidth?: string;
   gap?: string;
-  color?: string;
-  radius?: string;
+  accentColor?: string;
+  mainBg?: string;
+  borderWidth?: string;
+  shadowOffset?: string;
+  cardHeight?: string;
   showScrollbar?: boolean;
-}>(), {
+  showControls?: boolean;
+  showDecorators?: boolean;
+  stickerRotation?: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
   defaultAspectRatio: '1/1',
-  defaultSlideWidth: 'auto',
   gap: '30px',
-  color: '#A3E635', // Un lima brutalista típico
-  radius: '0px',
-  showScrollbar: true
+  accentColor: '#A3E635',
+  mainBg: '#ffffff',
+  borderWidth: '4px',
+  shadowOffset: '10px',
+  cardHeight: '420px',
+  showScrollbar: true,
+  showControls: true,
+  showDecorators: true,
+  stickerRotation: '3deg'
 });
 
 const carouselRef = ref<HTMLElement | null>(null);
@@ -86,9 +97,7 @@ const startDragging = (e: MouseEvent) => {
   startX = e.pageX - (carouselRef.value?.offsetLeft || 0);
   scrollLeft = carouselRef.value?.scrollLeft || 0;
 };
-
 const stopDragging = () => { isDragging.value = false; };
-
 const onDragging = (e: MouseEvent) => {
   if (!isDragging.value || !carouselRef.value) return;
   e.preventDefault();
@@ -97,8 +106,13 @@ const onDragging = (e: MouseEvent) => {
 };
 
 const carouselStyles = computed(() => ({
-  '--c-accent': props.color,
+  '--c-accent': props.accentColor,
   '--c-gap': props.gap,
+  '--main-bg': props.mainBg,
+  '--b-width': props.borderWidth,
+  '--s-offset': props.shadowOffset,
+  '--card-h': props.cardHeight,
+  '--sticker-rot': props.stickerRotation,
 }));
 </script>
 
@@ -107,7 +121,7 @@ const carouselStyles = computed(() => ({
   position: relative;
   width: 100%;
   padding: 20px;
-  background: #fff; /* El brutalismo suele ir sobre blanco o colores muy vibrantes */
+  background: var(--main-bg);
 }
 
 .controls {
@@ -120,13 +134,14 @@ const carouselStyles = computed(() => ({
   width: 60px;
   height: 60px;
   background: #fff;
-  border: 4px solid #000;
+  border: var(--b-width) solid #000;
   box-shadow: 6px 6px 0px #000;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.1s;
+  color: #000;
 }
 
 .navBtn:hover {
@@ -136,7 +151,7 @@ const carouselStyles = computed(() => ({
 }
 
 .navBtn:active {
-  transform: translate(6px, 6px);
+  transform: translate(4px, 4px);
   box-shadow: 0px 0px 0px #000;
 }
 
@@ -149,9 +164,12 @@ const carouselStyles = computed(() => ({
   cursor: crosshair;
 }
 
-/* Scrollbar ruda */
-.carouselRoot::-webkit-scrollbar { height: 16px; }
-.carouselRoot::-webkit-scrollbar-track { background: #fff; border: 4px solid #000; }
+/* Custom Scrollbar logic */
+.carouselRoot::-webkit-scrollbar { 
+  height: 16px; 
+  display: v-bind('showScrollbar ? "block" : "none"');
+}
+.carouselRoot::-webkit-scrollbar-track { background: #fff; border: var(--b-width) solid #000; }
 .carouselRoot::-webkit-scrollbar-thumb { background: #000; border: 2px solid #fff; }
 
 .isDragging {
@@ -168,7 +186,7 @@ const carouselStyles = computed(() => ({
 .slide {
   flex: 0 0 auto;
   aspect-ratio: var(--slide-aspect);
-  height: 420px;
+  height: var(--card-h);
   scroll-snap-align: start;
 }
 
@@ -177,15 +195,15 @@ const carouselStyles = computed(() => ({
   width: 100%;
   height: 100%;
   background: #000;
-  border: 4px solid #000;
-  box-shadow: 10px 10px 0px 0px #000;
+  border: var(--b-width) solid #000;
+  box-shadow: var(--s-offset) var(--s-offset) 0px 0px #000;
   transition: all 0.15s cubic-bezier(0, 0, 0, 1.25);
   overflow: hidden;
 }
 
 .slide:hover .brutalFrame {
   transform: translate(-4px, -4px);
-  box-shadow: 14px 14px 0px 0px var(--c-accent);
+  box-shadow: calc(var(--s-offset) + 4px) calc(var(--s-offset) + 4px) 0px 0px var(--c-accent);
 }
 
 .media {
@@ -211,10 +229,11 @@ const carouselStyles = computed(() => ({
   font-weight: 900;
   font-size: 1.2rem;
   text-transform: uppercase;
-  border: 4px solid #000;
-  transform: rotate(3deg);
+  border: var(--b-width) solid #000;
+  transform: rotate(var(--sticker-rot));
   z-index: 5;
   box-shadow: 5px 5px 0px #000;
+  user-select: none;
 }
 
 .edgeDecorator {
@@ -224,13 +243,13 @@ const carouselStyles = computed(() => ({
   width: 30px;
   height: 30px;
   background: #fff;
-  border: 4px solid #000;
+  border: var(--b-width) solid #000;
   border-radius: 50%;
   z-index: 4;
 }
 
 @media (max-width: 768px) {
-  .slide { height: 320px; }
+  .slide { height: calc(var(--card-h) * 0.75); }
   .navBtn { width: 50px; height: 50px; }
 }
 </style>

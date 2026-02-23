@@ -1,17 +1,24 @@
 <template>
-  <nav v-bind="$attrs" :class="$style.breadcrumbRoot" :style="breadcrumbStyles">
+  <nav 
+    v-bind="$attrs" 
+    :class="$style.breadcrumbRoot" 
+    :style="navStyles"
+  >
     <ol :class="$style.list">
       <li v-for="(item, index) in items" :key="index" :class="$style.item">
         <NuxtLink 
           :to="item.to" 
-          :class="[$style.link, { [$style.active]: index === items.length - 1 }]"
+          :class="[
+            $style.link, 
+            $style[size],
+            { [$style.active]: index === items.length - 1 }
+          ]"
         >
-          <Icon v-if="item.icon" :name="item.icon" :class="$style.icon" />
-          {{ item.label }}
+          <span v-if="item.icon" :class="$style.icon">{{ item.icon }}</span>
+          <span :class="$style.label">{{ item.label }}</span>
+          
+          <div v-if="index < items.length - 1" :class="$style.arrowHead" />
         </NuxtLink>
-        <span v-if="index < items.length - 1" :class="$style.separator">
-          <slot name="separator"> / </slot>
-        </span>
       </li>
     </ol>
   </nav>
@@ -27,25 +34,36 @@ interface BreadcrumbItem {
   icon?: string;
 }
 
-const props = defineProps<{
+interface Props {
   items: BreadcrumbItem[];
-  color?: string;
-  shadow?: string | boolean;
-}>();
+  accentColor?: string;   /* Color del texto activo y hover */
+  baseBg?: string;        /* Fondo de los eslabones */
+  textColor?: string;     /* Color de texto inactivo */
+  size?: 'sm' | 'md' | 'lg';
+  angle?: number;         /* Inclinación del corte (0 a 20) */
+}
 
-const breadcrumbStyles = computed(() => ({
-  '--b-color': props.color || '#4f46e5',
-  '--b-shadow': props.shadow === true ? "0 4px 12px rgba(0,0,0,0.1)" : (props.shadow || 'none')
+const props = withDefaults(defineProps<Props>(), {
+  accentColor: '#4f46e5',
+  baseBg: '#ffffff',
+  textColor: '#6b7280',
+  size: 'md',
+  angle: 15
+});
+
+const navStyles = computed(() => ({
+  '--b-accent': props.accentColor,
+  '--b-bg': props.baseBg,
+  '--b-text': props.textColor,
+  '--b-angle': `${props.angle}%`,
+  '--b-angle-inv': `${100 - props.angle}%`,
 }));
 </script>
 
 <style module>
 .breadcrumbRoot {
   display: inline-block;
-  padding: 0.5rem 1rem;
-  background: #f3f4f6;
-  clip-path: polygon(0% 0%, 95% 0%, 100% 50%, 95% 100%, 0% 100%);
-  box-shadow: var(--b-shadow);
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
 }
 
 .list {
@@ -53,31 +71,95 @@ const breadcrumbStyles = computed(() => ({
   list-style: none;
   margin: 0;
   padding: 0;
-  gap: 0.5rem;
+  /* Margen negativo para que los elementos se encajen entre sí */
+  gap: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
 }
 
 .link {
+  position: relative;
   text-decoration: none;
-  color: #6b7280;
-  font-weight: 600;
-  font-size: 0.875rem;
-  transition: color 0.2s;
+  background: var(--b-bg);
+  color: var(--b-text);
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  transition: all 0.3s ease;
+  
+  /* Corte geométrico tipo flecha/fletcha */
+  clip-path: polygon(
+    0% 0%, 
+    var(--b-angle-inv) 0%, 
+    100% 50%, 
+    var(--b-angle-inv) 100%, 
+    0% 100%, 
+    var(--b-angle) 50%
+  );
+  
+  /* Compensación de padding para el corte izquierdo */
+  padding-left: 2rem;
+  padding-right: 2.5rem;
 }
+
+/* Primer elemento: No tiene corte de entrada (flecha) */
+.item:first-child .link {
+  clip-path: polygon(
+    0% 0%, 
+    var(--b-angle-inv) 0%, 
+    100% 50%, 
+    var(--b-angle-inv) 100%, 
+    0% 100%
+  );
+  padding-left: 1.2rem;
+  border-radius: 8px 0 0 8px;
+}
+
+/* Último elemento: Es el estado activo */
+.active {
+  background: var(--b-accent);
+  color: #ffffff !important;
+  pointer-events: none;
+  padding-right: 1.5rem;
+  /* El último no necesita punta de flecha de salida */
+  clip-path: polygon(
+    0% 0%, 
+    100% 0%, 
+    100% 100%, 
+    0% 100%, 
+    var(--b-angle) 50%
+  );
+  border-radius: 0 8px 8px 0;
+}
+
+/* Tamaños */
+.sm { height: 32px; font-size: 0.75rem; padding-left: 1.5rem; padding-right: 2rem; }
+.md { height: 44px; font-size: 0.85rem; }
+.lg { height: 56px; font-size: 1rem; padding-left: 2.5rem; padding-right: 3.5rem; }
 
 .link:hover:not(.active) {
-  color: var(--b-color);
+  background: #f9fafb;
+  color: var(--b-accent);
+  transform: translateX(4px);
+  z-index: 10;
 }
 
-.active {
-  color: var(--b-color);
-  pointer-events: none;
+.icon {
+  margin-right: 0.5rem;
+  font-size: 1.2em;
 }
 
-.separator {
-  color: #d1d5db;
-  font-weight: 300;
+.label {
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 640px) {
+  .label { display: none; }
+  .icon { margin-right: 0; }
+  .link { padding-left: 1.5rem; padding-right: 2rem; }
 }
 </style>

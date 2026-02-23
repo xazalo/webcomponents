@@ -1,24 +1,30 @@
 <template>
-  <div :class="$style.clayPagination">
+  <div 
+    v-bind="$attrs"
+    :class="[$style.clayPagination, $style[size]]" 
+    :style="clayStyles"
+  >
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navBtn]" 
       @click="prevPage" 
       :disabled="modelValue === 1"
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-        <path d="m15 18-6-6 6-6"/>
-      </svg>
+      <slot name="prev-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </slot>
     </button>
 
-    <div :class="[$style.cell, $style.statusCell]">
-      <span :class="$style.label">PAG_</span>
+    <div v-if="showStatus" :class="[$style.cell, $style.statusCell]">
+      <span :class="$style.label">{{ prefix }}</span>
       <div :class="$style.counter">
         <span :class="$style.current">{{ modelValue }}</span>
         <span :class="$style.total">/ {{ totalPages }}</span>
       </div>
     </div>
 
-    <div :class="[$style.cell, $style.quickJumpCell]">
+    <div v-if="showNumbers" :class="[$style.cell, $style.quickJumpCell]">
       <button 
         v-for="page in visiblePages" 
         :key="page"
@@ -30,24 +36,47 @@
     </div>
 
     <button 
-      :class="$style.navCell" 
+      :class="[$style.cell, $style.navBtn]" 
       @click="nextPage" 
       :disabled="modelValue === totalPages"
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-        <path d="m9 18 6-6-6-6"/>
-      </svg>
+      <slot name="next-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </slot>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
+interface Props {
   modelValue: number;
   totalPages: number;
-}>();
+  prefix?: string;
+  // Configuración Clay
+  clayColor?: string;     /* Color base (ej: #eef2f7) */
+  accentColor?: string;   /* Color activo (ej: #6366f1) */
+  depth?: number;         /* Intensidad del relieve (1-10) */
+  borderRadius?: string;
+  size?: 'sm' | 'md' | 'lg';
+  showStatus?: boolean;
+  showNumbers?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  prefix: 'PAG_',
+  clayColor: '#eef2f7',
+  accentColor: '#6366f1',
+  depth: 6,
+  borderRadius: '20px',
+  size: 'md',
+  showStatus: true,
+  showNumbers: true
+});
 
 const emit = defineEmits(['update:modelValue']);
 
@@ -66,91 +95,98 @@ const visiblePages = computed(() => {
   for (let i = start; i <= end; i++) pages.push(i);
   return pages;
 });
+
+const clayStyles = computed(() => {
+  const d = props.depth;
+  return {
+    '--c-bg': props.clayColor,
+    '--c-accent': props.accentColor,
+    '--c-radius': props.borderRadius,
+    // Sombra exterior (Flotación)
+    '--c-shadow-out': `${d}px ${d}px ${d*2}px rgba(0, 0, 0, 0.08)`,
+    // Sombra interior (Volumen arcilloso)
+    '--c-shadow-in': `inset ${d/2}px ${d/2}px ${d}px rgba(0, 0, 0, 0.04), 
+                     inset -${d/2}px -${d/2}px ${d}px rgba(255, 255, 255, 0.7)`,
+    // Brillo superior para efecto 3D
+    '--c-highlight': `inset ${d/4}px ${d/4}px ${d/2}px rgba(255, 255, 255, 1)`,
+  };
+});
 </script>
 
 <style module>
-:root {
-  --clay-bg: #eef2f7;
-  --clay-accent: #6366f1; /* Indigo Clay */
-  --clay-radius: 20px;
-  --clay-shadow-out: 8px 8px 16px rgba(0, 0, 0, 0.08), 
-                    -8px -8px 16px rgba(255, 255, 255, 0.8);
-  --clay-shadow-in: inset 4px 4px 8px rgba(0, 0, 0, 0.04), 
-                   inset -4px -4px 8px rgba(255, 255, 255, 0.7);
-}
-
 .clayPagination {
   display: flex;
   gap: 12px;
   padding: 14px;
-  background: var(--clay-bg);
-  border-radius: calc(var(--clay-radius) * 1.5);
-  box-shadow: var(--clay-shadow-out);
+  background: var(--c-bg);
+  border-radius: calc(var(--c-radius) * 1.5);
+  box-shadow: var(--c-shadow-out);
   width: fit-content;
   align-items: center;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .cell {
-  background: var(--clay-bg);
-  padding: 10px 18px;
-  border-radius: var(--clay-radius);
+  background: var(--c-bg);
+  border-radius: var(--c-radius);
   display: flex;
-  box-shadow: var(--clay-shadow-out), var(--clay-shadow-in);
+  box-shadow: var(--c-shadow-out), var(--c-shadow-in), var(--c-highlight);
   border: none;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.navCell {
-  padding: 10px;
-  width: 46px;
-  height: 46px;
+/* --- Botones --- */
+.navBtn {
+  width: 44px;
+  height: 44px;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   color: #64748b;
-  transition: all 0.3s ease;
 }
 
-.navCell:hover:not(:disabled) {
-  transform: translateY(-2px);
-  color: var(--clay-accent);
+.navBtn:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.05);
+  color: var(--c-accent);
 }
 
-.navCell:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.1);
+.navBtn:active:not(:disabled) {
+  transform: translateY(2px) scale(0.95);
+  box-shadow: var(--c-shadow-in);
 }
 
-.navCell:disabled {
+.navBtn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: var(--clay-shadow-in);
+  box-shadow: var(--c-shadow-in);
 }
 
+/* --- Status --- */
 .statusCell {
   flex-direction: column;
   align-items: center;
   min-width: 85px;
-  gap: 2px;
+  padding: 8px 18px;
+  gap: 1px;
 }
 
 .label {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 800;
   color: #94a3b8;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .counter {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 3px;
 }
 
 .current {
   font-size: 1.1rem;
   font-weight: 800;
-  color: var(--clay-accent);
+  color: var(--c-accent);
 }
 
 .total {
@@ -159,34 +195,42 @@ const visiblePages = computed(() => {
   color: #cbd5e1;
 }
 
+/* --- Quick Jump --- */
 .quickJumpCell {
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 8px 12px;
 }
 
 .pageBtn {
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: calc(var(--c-radius) * 0.6);
   border: none;
-  background: var(--clay-bg);
+  background: var(--c-bg);
   font-size: 0.85rem;
   font-weight: 800;
   color: #64748b;
   cursor: pointer;
+  box-shadow: var(--c-shadow-out), var(--c-shadow-in);
   transition: all 0.3s ease;
-  box-shadow: var(--clay-shadow-out), var(--clay-shadow-in);
 }
 
 .activePage {
-  background: var(--clay-accent);
+  background: var(--c-accent);
   color: white !important;
-  box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.2), 
-              4px 4px 12px rgba(99, 102, 241, 0.3);
-  transform: scale(0.95);
+  transform: scale(0.92);
+  box-shadow: 
+    inset 4px 4px 8px rgba(0, 0, 0, 0.2),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.2),
+    0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
+/* --- Tamaños --- */
+.sm { padding: 10px; gap: 8px; }
+.sm .navBtn { width: 36px; height: 36px; }
+.lg { padding: 20px; gap: 16px; }
+
 @media (max-width: 500px) {
-  .quickJumpCell { display: none; }
+  .statusCell { display: none; }
 }
 </style>
